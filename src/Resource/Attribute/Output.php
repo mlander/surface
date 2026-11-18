@@ -8,7 +8,7 @@ namespace Drupal\surface\Resource\Attribute;
  * On a property: an output key, declared on the output blueprint.
  *
  * Says what #[Input] says, of a value the resource or structure answers
- * with and nobody sends: the spelling of add() and addList() in
+ * with and nobody sends: the spelling of add() in
  * defineOutputs(). The class implements DefinesOutputsInterface, and the
  * trait answers defineOutputs() from these properties alone, as it
  * answers defineInputs() from the others.

@@ -23,10 +23,10 @@ final class BenchStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('enabled', Schema::bool()
+    $inputs->add('enabled', Schema::bool()
       ->title(t('In use'))
       ->default(TRUE));
-    $inputs->addSchema('hours', Schema::integer()
+    $inputs->add('hours', Schema::integer()
       ->title(t('Hours a day'))
       ->default(1)
       ->minimum(1)

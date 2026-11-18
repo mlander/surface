@@ -19,7 +19,7 @@ final class CreatedOnlyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('created', Schema::string()
+    $inputs->add('created', Schema::string()
       ->title('Created'));
   }
 

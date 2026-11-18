@@ -478,7 +478,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | --- | --- |
 | label, description | `title`, `description`, as plain text: a placeholder's escaping decoded, a line break a new line, every other tag stripped; the form keeps the markup (why: [decision](decisions.md#a-machine-document-carries-plain-text)) |
 | `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types, `date` for a string drawn as a date, asserted); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
-| `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
+| `required()` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range`, on an integer or a number | `minimum`, `maximum`, always numbers (core's timestamp field holds its bounds as strings); a bound that is no number, or one read from another property, is also left to the server |
 | `Length`, on a string | `minLength`, `maxLength`; `exactly` as both, equal, where neither `min` nor `max` is given |
@@ -1325,14 +1325,14 @@ stock widgets' own rule for which element a list of choices is, and the
 form draws each key with the widget the word names, so the hint and the
 form never disagree (why: [decision](decisions.md#a-widget-is-chosen-from-the-definition),
 [decision](decisions.md#the-form-is-drawn-from-the-document)).
-A definition asks for an element with `setSetting('widget', ...)` in
+A key asks for an element with `ui(widget: ...)` on its schema in
 the hint's words: `radios`, `checkboxes`, `select`, `time`.
 
 | Definition | Form API element | `x-portable-ui.widget` | React component |
 | --- | --- | --- | --- |
 | a key a module's widget claims, unless its owner asks for a widget | that widget's element | its plugin ID | the stock field for the key's JSON type (`stockWidget()`) |
 | any key whose constraints resolve to a list, an empty one included | `select`, empty option by the rule | `select` | `SelectField` |
-| such a key that asks for radios, `setSetting('widget', 'radios')` | `radios`, a `- None -` radio only where the key may be cleared | `radios` | `RadiosField` |
+| such a key that asks for radios, `ui(widget: 'radios')` | `radios`, a `- None -` radio only where the key may be cleared | `radios` | `RadiosField` |
 | a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value), while what is stored is that value or nothing | `item`: the value's label, the value posted, no AJAX trigger | `fixed` | `FixedField` |
 | a key that refers to an entity, past the limit, and a bare reference's id | core's `entity_autocomplete`, its selection settings the key's; a select while its candidates are listed | `autocomplete` | `AutocompleteField`: a select while the schema lists the candidates, else a text input whose suggestions the lookup answers |
 | a key that does not apply | nothing but its wrapper | (no property) | nothing |
@@ -1342,10 +1342,10 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | `third_party_settings`, which only groups each module's map | `container`, no title | `fieldset`, `group: true` | `FieldsetField`, as a plain `div` |
 | a module's map its alter placed | its `details`, drawn after the named key | `fieldset`, `after: "<key>"` | `FieldsetField`, drawn after that sibling of the group |
 | a key with variants | the chosen variant's `details`; nothing while none is chosen | `variants` | `VariantsField` |
-| `string` with the `multiline` setting | `textarea`, no maxlength, no placeholder | `textarea` | `TextareaField` |
+| `string` asking for a text area, `ui(widget: 'textarea')` | `textarea`, no maxlength, no placeholder | `textarea` | `TextareaField` |
 | `email` | `email` | `email` | `TextField` (type email) |
-| `string` asking for a time, `setSetting('widget', 'time')` | a time input (`date`, type `time`), the Regex still the rule | `time` | `TextField` (type time) |
-| `string` asking for a date, `setSetting('widget', 'date')` | a date input (`date`), the Regex still the rule; both documents state `format: date` | `date` | `TextField` (type date) |
+| `string` asking for a time, `ui(widget: 'time')` | a time input (`date`, type `time`), the Regex still the rule | `time` | `TextField` (type time) |
+| `string` asking for a date, `ui(widget: 'date')` | a date input (`date`), the Regex still the rule; both documents state `format: date` | `date` | `TextField` (type date) |
 | `string`, `uri` | `textfield`, `url` | `text` | `TextField` (type text, url; password for a secret) |
 | `integer`, `float` | `number`, `#min`/`#max` from Range, `#step` 1 or any | `number` | `NumberField` |
 | `boolean` | `checkbox`, never `#required` | `checkbox` | `CheckboxField` |

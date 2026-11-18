@@ -2,51 +2,62 @@
 
 A rule says what values a key allows. A key can be required, a text can
 have a maximum length, a number can have a range, and a value can be
-held to a list of choices. Rules are Drupal's validation constraints:
-the same `Length`, `Range` and `Choice` that entity fields and config
-schema already use.
+held to a list of choices. Rules are written in the key's schema, and
+the module checks them with Drupal's validation constraints: the same
+`Length`, `Range` and `Choice` that entity fields and config schema
+already use.
 
 ![The my_module.settings resource with three of its keys and their rules: title, a string, is required and at most 64 characters; items_per_page, an integer, is required and between 1 and 50; layout, a string, is required and one of list or grid](images/06-rules-on-a-key.svg)
 
 ## Adding rules
 
-`add()` returns core's `DataDefinition`, so a rule is a call chained on
-it. The three keys of your module's settings that carry rules:
+A rule is a call on the key's schema, before the schema is handed to
+`add()`. The three keys of your module's settings that carry rules:
 
 ```php
-$inputs->add('title', 'string', t('Title'), default: 'Latest content')
-  ->setRequired(TRUE)
-  ->addConstraint('Length', ['max' => 64]);
+$inputs->add('title', Schema::string()
+  ->title(t('Title'))
+  ->default('Latest content')
+  ->maxLength(64)
+  ->required());
 
-$inputs->add('items_per_page', 'integer', t('Items per page'), default: 10)
-  ->setRequired(TRUE)
-  ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+$inputs->add('items_per_page', Schema::integer()
+  ->title(t('Items per page'))
+  ->default(10)
+  ->minimum(1)
+  ->maximum(50)
+  ->required());
 
-$inputs->add('layout', 'string', t('Layout'), default: 'list')
-  ->setRequired(TRUE)
-  ->addConstraint('LabeledChoice', [
-    'choices' => [
-      'list' => t('List'),
-      'grid' => t('Grid'),
-    ],
-  ]);
+$inputs->add('layout', Schema::options([
+  'list' => t('List'),
+  'grid' => t('Grid'),
+])
+  ->title(t('Layout'))
+  ->default('list')
+  ->required());
 ```
 
-- `setRequired(TRUE)`: the key must hold a value. `FALSE`, `0` and an
+- `required()`: the key must hold a value. `FALSE`, `0` and an
   empty list count as a value; only nothing and the empty string do
-  not. `show_author` and `notify_email` are not required, so a caller
-  may clear them.
-- `addConstraint('Length', ['max' => 64])`: the most characters a text
-  may have.
-- `addConstraint('Range', ['min' => 1, 'max' => 50])`: the lowest and
-  highest number.
-- `addConstraint('LabeledChoice', ['choices' => ...])`: one of a list
-  of values, each with a label. `choices` maps each allowed value to
-  its label. The module's `LabeledChoice` is core's `Choice` with
-  labels added.
+  not. `show_author` and `notify_email` are not marked, so a caller
+  may clear them. A key is required only when its schema says
+  `required()`.
+- `maxLength(64)`: the most characters a text may have. `minLength()`
+  is the fewest.
+- `minimum(1)` and `maximum(50)`: the lowest and highest number.
+- `Schema::options([...])`: one of a list of values, each with a
+  label. The array maps each allowed value to its label, and
+  `type('string')` after it says what type the values are.
+  `Schema::enum([...])` is a list of values with no labels.
+- `pattern('^[a-z]+$')`: a text must match the regular expression.
 
-Any other constraint registered with Drupal works as well. A rule is
-written once, on the key, and nowhere else.
+Each of these is a JSON Schema keyword, and the module checks it with
+Drupal's own validation constraint: `maxLength` with `Length`,
+`minimum` and `maximum` with `Range`, a list of values with `Choice`.
+Any other constraint registered with Drupal is a named check:
+`check('drupal:NotBlank')`, with the constraint's options as a second
+argument where it takes any. A rule is written once, on the key, and
+nowhere else.
 
 ## What the form and the tool do with it
 

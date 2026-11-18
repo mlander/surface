@@ -24,16 +24,16 @@ final class SwatchStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('accent', Schema::string()
+    $inputs->add('accent', Schema::string()
       ->title(t('Accent'))
       ->default('#336699')
       ->annotation('x-surface-settings', ['format' => 'color']));
-    $inputs->addSchema('trim', Schema::options(['#000000' => t('Black'), '#ffffff' => t('White')])
+    $inputs->add('trim', Schema::options(['#000000' => t('Black'), '#ffffff' => t('White')])
       ->title(t('Trim'))
       ->default('#000000')
       ->annotation('x-surface-settings', ['format' => 'color'])
       ->ui(widget: 'radios'));
-    $inputs->addSchema('caption', Schema::string()
+    $inputs->add('caption', Schema::string()
       ->title(t('Caption')));
   }
 

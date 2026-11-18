@@ -34,12 +34,12 @@ final class BulletinResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
+    $inputs->add('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
       ->title(t('Frequency'))
       ->default('weekly')
       ->required());
 
-    $inputs->addSchema('send_day', Schema::options([
+    $inputs->add('send_day', Schema::options([
       'monday' => t('Monday'),
       'wednesday' => t('Wednesday'),
       'friday' => t('Friday'),
@@ -48,7 +48,7 @@ final class BulletinResource implements ResourceInterface {
       ->default('monday')
       ->required());
 
-    $inputs->addSchema('items', Schema::integer()
+    $inputs->add('items', Schema::integer()
       ->title(t('Items per issue'))
       ->default(5)
       ->minimum(1)

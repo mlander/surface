@@ -26,7 +26,7 @@ final class PastedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('api_key', Schema::string()
+    $inputs->add('api_key', Schema::string()
       ->title(t('API key'))
       ->description(t('The key the mail service issued, pasted here.'))
       ->writeOnly(TRUE)

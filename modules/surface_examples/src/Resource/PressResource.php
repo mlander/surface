@@ -32,7 +32,7 @@ final class PressResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('public', Schema::bool()
+    $inputs->add('public', Schema::bool()
       ->title(t('Show on the press page'))
       ->default(TRUE));
 

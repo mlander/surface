@@ -32,12 +32,18 @@ fixed structure. Its `plugin` key chooses which one. These are the two
 keys in `BlockPlacementResource`'s `defineInputs()`, in full:
 
 ```php
-$inputs->add('plugin', 'string', t('Block'))
-  ->setDescription(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
-  ->setRequired(TRUE);
+$inputs->add('plugin', Schema::string()
+  ->title(t('Block'))
+  ->description(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
+  ->required());
 
-$inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginStructures::class)
-  ->setDescription(t('The settings of the block chosen, as its plugin declares them.'));
+$inputs->attachVariants(
+  'settings',
+  by: 'plugin',
+  label: t('Settings'),
+  from: BlockPluginStructures::class,
+  description: t('The settings of the block chosen, as its plugin declares them.'),
+);
 ```
 
 `BlockPluginStructures` lists one variant per block plugin the block

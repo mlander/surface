@@ -25,7 +25,7 @@ final class HarnessStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('straps', Schema::integer()
+    $inputs->add('straps', Schema::integer()
       ->title(t('Straps'))
       ->default(2));
 
@@ -34,7 +34,7 @@ final class HarnessStructure implements StructureInterface {
     $inputs->attachList('pockets', PocketStructure::class, t('Pockets'), max: 2);
 
     $inputs->addMap('cover', t('Rain cover'), static function (BlueprintInterface $cover): void {
-      $cover->addSchema('color', Schema::string()
+      $cover->add('color', Schema::string()
         ->title(t('Color')));
       $cover->attach('pouch', PocketStructure::class, t('Pouch'));
     });

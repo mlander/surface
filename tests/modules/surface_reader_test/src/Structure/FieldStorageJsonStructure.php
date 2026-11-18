@@ -20,7 +20,7 @@ final class FieldStorageJsonStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('field_type', Schema::enum(['decimal', 'entity_reference', 'string'])
+    $inputs->add('field_type', Schema::enum(['decimal', 'entity_reference', 'string'])
       ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'field_type', label: t('Settings'), from: FieldStorageSettingsSchemaVariants::class);

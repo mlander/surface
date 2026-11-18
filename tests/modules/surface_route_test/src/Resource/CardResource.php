@@ -78,23 +78,23 @@ final class CardResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('card', Schema::string()
+    $inputs->add('card', Schema::string()
       ->title('Card')
       ->required());
 
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title('Title')
       ->default('Hello')
       ->maxLength(40)
       ->required());
 
-    $inputs->addSchema('copies', Schema::integer()
+    $inputs->add('copies', Schema::integer()
       ->title('Copies')
       ->default(1)
       ->minimum(1)
       ->maximum(10));
 
-    $inputs->addSchema('occasion', Schema::enum(['birthday', 'wedding', 'thanks'])
+    $inputs->add('occasion', Schema::enum(['birthday', 'wedding', 'thanks'])
       ->title('Occasion'));
 
     $format = DataDefinition::create('string')
@@ -102,7 +102,7 @@ final class CardResource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['plain', 'html']]);
     $inputs->addMap('greeting', 'Greeting', static function (BlueprintInterface $greeting) use ($format): void {
-      $greeting->addSchema('value', Schema::string()
+      $greeting->add('value', Schema::string()
         ->title('Text'));
       $greeting->addDefinition('format', $format, default: 'plain');
     });
@@ -111,13 +111,13 @@ final class CardResource implements ResourceInterface {
 
     $inputs->attachList('inserts', EnvelopeStructure::class, 'Inserts');
 
-    $inputs->addSchema('paper', Schema::string()
+    $inputs->add('paper', Schema::string()
       ->title('Paper')
       ->default('plain'));
 
     $inputs->attachVariants('paper_settings', by: 'paper', label: 'Paper settings');
 
-    $inputs->addSchema('code', Schema::string()
+    $inputs->add('code', Schema::string()
       ->title('Code')
       ->writeOnly(TRUE));
   }

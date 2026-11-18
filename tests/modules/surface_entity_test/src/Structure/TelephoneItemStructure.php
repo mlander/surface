@@ -21,7 +21,7 @@ final class TelephoneItemStructure implements FieldItemStructureInterface {
    * {@inheritdoc}
    */
   public static function defineItem(BlueprintInterface $inputs, FieldDefinitionInterface $field): void {
-    $inputs->addSchema('value', Schema::string()
+    $inputs->add('value', Schema::string()
       ->title($field->getLabel())
       ->description(t('Digits, spaces and a leading plus.'))
       ->check('drupal:Regex', [

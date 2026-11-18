@@ -20,7 +20,7 @@ final class InsuranceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('policy', Schema::string()
+    $inputs->add('policy', Schema::string()
       ->title(t('Policy')));
   }
 

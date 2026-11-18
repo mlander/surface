@@ -22,7 +22,7 @@ final class EntityContentAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('reviewer_note', Schema::string()
+    $inputs->add('reviewer_note', Schema::string()
       ->title($this->t('Reviewer note')));
   }
 

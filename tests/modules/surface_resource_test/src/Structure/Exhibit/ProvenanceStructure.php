@@ -22,9 +22,9 @@ final class ProvenanceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('source', Schema::string()
+    $inputs->add('source', Schema::string()
       ->title(t('Source')));
-    $inputs->addSchema('acquired', Schema::integer()
+    $inputs->add('acquired', Schema::integer()
       ->title(t('Acquired'))
       ->minimum(1800));
   }

@@ -38,7 +38,7 @@ each role has exactly one permission.
 | Role | When | May | May not |
 | --- | --- | --- | --- |
 | **Contributor** | Build time: an alter's `alterInputs()` | Add keys, mounted under its own module's name; offer more values on a fixed list with `extendChoices()`; reword a label or description with `describe()` | Add bare top-level keys, take anything away, change a key's type, contribute a value somebody already owns |
-| **Refiner** | Refinement, per request: a rule declared with `narrow()`, or a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, hand back a value it was not given |
+| **Refiner** | Refinement, per request: a rule declared with `narrow()`, or a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, allow a value the key did not |
 
 The **owner** of a resource or structure, the `#[Resource]` or
 `#[Structure]` class that declares it, is simply the first contributor.
@@ -56,10 +56,24 @@ An alter contributes in `alterInputs()`:
 #[Alters(ExampleFormatter::class)]
 final class ExampleFormatterAlter implements AltersInputsInterface {
 
+  use StringTranslationTrait;
+
+  public const RIBBON = 'ribbon';
+
+  // __construct() is left out: it is not part of the surface.
+
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
+    $inputs->add('badge', Schema::options([
+      'star' => $this->t('Star'),
+      'flame' => $this->t('Flame'),
+    ])
+      ->title($this->t('Badge'))
+      ->description($this->t('A badge rendered beside the value.'))
+      ->default('star'));
     $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);
   }
+
+  // ribbonInUpperCase() is in the worked example below.
 
 }
 ```
@@ -102,7 +116,7 @@ use Drupal\surface\Refinement\Condition;
 
 $inputs->narrow('capacity')
   ->when(Condition::absent('license'))
-  ->constrain('Range', ['max' => 100])
+  ->constrain(Schema::any()->maximum(100))
   ->because($this->t('Up to 100 without an event license.'));
 ```
 
@@ -141,20 +155,22 @@ The conditional requiring a key wherever no rule rules it out tests
 
 | Effect | Does, while the condition holds | Stated as the `then` |
 | --- | --- | --- |
-| `->constrain('Range', ['min' => a, 'max' => b, 'message' => ...])` | raises the minimum, lowers the maximum; refuses a value outside the rule's bound with the message, if one is given | `minimum`, `maximum` |
-| `->constrain('Length', [...])`, `('Count', [...])` | the same, for a text's length, a list's items | `minLength`, `maxLength`; `minItems`, `maxItems` |
-| `->constrain('Choice', ['choices' => [...]])` | keeps only these of the key's own values (`LabeledChoice` reads the same) | `oneOf` of what stays |
-| `->constrain('Regex', ['pattern' => ..., 'message' => ...])` | a pattern, where the key has none | `pattern` |
+| `->constrain(Schema::any()->minimum(a)->maximum(b))` | raises the minimum, lowers the maximum | `minimum`, `maximum` |
+| `->constrain(Schema::any()->minLength(a)->maxLength(b))`, `minItems()`, `maxItems()` | the same, for a text's length, a list's items | `minLength`, `maxLength`; `minItems`, `maxItems` |
+| `->constrain(Schema::enum([...]))` | keeps only these of the key's own values, in the key's order and with its labels | `oneOf` of what stays |
+| `->constrain(Schema::any()->pattern(...))` | a pattern, where the key has none | `pattern` |
+| `->constrain(Schema::any()->check('drupal:<id>', [...]))` | a bound with a message of its own, or a constraint no keyword says | `portable-check`, or the bound's keyword |
 | `->require()` | the key must hold a value | `required`, and its type without `null` |
 | `->doesNotApply()` | the key [does not apply](#when-a-key-does-not-apply) | the key `false` |
 | `->because($text)` | says why, under the field, where the rule's other effects tightened the key for these values (always for `require()`, or for a description alone) | `description`, kept in the `then` whatever the values |
 
-A bound's `message` is one sentence for the rule, as a `Regex`'s is:
-written under Symfony's own option for each bound the rule sets
-(`minMessage`, `maxMessage`; `notInRangeMessage` for a range holding
-both bounds, and `exactMessage` too for a length or count, for both
-bounds at one value), and only where the rule's bound is the one that
-stands, so a bound the key already held keeps the key's message.
+A bound with a message of its own is the check form, its options
+Symfony's: the message under Symfony's own option for each bound the
+rule sets (`minMessage`, `maxMessage`; `notInRangeMessage` for a range
+holding both bounds, and `exactMessage` too for a length or count, for
+both bounds at one value). It is used only where the rule's bound is
+the one that stands, so a bound the key already held keeps the key's
+message.
 Symfony reports a range holding both bounds in one message, whichever
 side refuses, so word a rule's message on a range for the range ("From
 1 to 100 without a license."), and write its numbers into the sentence:
@@ -164,7 +180,7 @@ the tool refuse with it, the condition after it:
 ```php
 $inputs->narrow('late_days')
   ->when(Condition::equals('after_hours', TRUE))
-  ->constrain('Count', ['min' => 1, 'message' => t('Choose at least one day for after-hours access.')]);
+  ->constrain(Schema::any()->check('drupal:Count', ['min' => 1, 'minMessage' => t('Choose at least one day for after-hours access.')]));
 ```
 
 "Choose at least one day for after-hours access. This applies when
@@ -195,7 +211,7 @@ things set it apart:
   maximum above its own or a value its list does not offer, is refused
   when the resource is built, and so are a condition comparing a key
   with a value of another type, a rule with no condition (a rule that
-  holds whatever the other keys hold is a constraint in
+  holds whatever the other keys hold is a rule in the key's schema in
   `defineInputs()`: [recipe](recipes.md#an-unconditional-rule-is-a-constraint)),
   and a rule requiring a key a refiner may rule out.
 
@@ -211,29 +227,28 @@ set of values evaluates it, as the pipeline does
 Refinement runs per request, whenever the values a key depends on are
 known. In four lines:
 
-1. Deep-clone the advertised definition, and divide its list of allowed
-   values into the owner's (everything nobody contributed) and one
-   slice per contributor.
-2. Run the owner's refiners over the owner's slice.
-3. Run each contributor's refiners over that contributor's slice.
-4. The refined definition is the owner's, with its list of allowed
-   values replaced by the **union** of every narrowed slice.
+1. Divide the key's list of allowed values into the owner's (everything
+   nobody contributed) and one slice per contributor.
+2. Apply each of the owner's refiners' answers to the owner's slice.
+3. Apply each contributor's refiners' answers to that contributor's
+   slice.
+4. The refined key is the owner's, with its list of allowed values
+   replaced by the **union** of every narrowed slice.
 
 A `#[RefinesInput]` method of an alter on a key the alter offered more
-values on is that contribution's refiner: handed the alter's values
-only. A method of an alter on any other key of the owner's runs in the
-owner's chain, after the owner's own methods.
+values on is that contribution's refiner: its answer applies to the
+alter's values only. A method of an alter on any other key of the
+owner's runs in the owner's chain, after the owner's own methods.
 
 The union is the whole point. A refiner narrowing "its" option can never
 take a sibling module's option with it, and can never put back an option
-another module narrowed away, because it never sees them. Where a key
-has a single contribution (nearly every key), the algorithm reduces to
-a plain chain of refiners over the whole definition, minus the ability
-to widen.
+another module narrowed away, because its answer never reaches them.
+Where a key has a single contribution (nearly every key), the algorithm
+reduces to a plain chain of answers applied to the whole key.
 
 Only the values are merged this way. Everything else about the refined
-definition (its other constraints, its description, its default) is
-the owner's, because the owner is the one who answers for the key.
+key (its other rules, its description, its default) is the owner's,
+because the owner is the one who answers for the key.
 
 #### One method, one rule
 
@@ -241,17 +256,41 @@ A refiner is a method, so a class that refines several keys has several
 methods, each named for its rule and each attributed with the one key it
 refines: `ExampleBlockStructure::bundleOfEntityType()` and
 `::fieldOfBundle()`. Nothing dispatches on a key's name. The method
-takes the key's definition first and one parameter per sibling it
-watches, and runs once every watched sibling has a value. A watched
-value its own key's refined definition refuses counts as no value: a
-refiner never sees an invalid sibling, so a license in the wrong format
-is no license (why: [decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
+takes one parameter per sibling it watches, and runs once every watched
+sibling has a value. A watched value its own key's refined schema
+refuses counts as no value: a refiner never sees an invalid sibling, so
+a license in the wrong format is no license
+(why: [decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
 
-A refiner is handed a deep clone, so it may mutate what it is given and
-hand it back, or answer with a fresh definition. A fresh definition does
-not have to carry the declared default or the examples forward: those
-are copied across every link, so the rendered form and the accepted
-value cannot disagree about what a key starts from.
+#### What an answer says
+
+A refiner returns a `Schema` of what the watched values add to the key,
+or `DoesNotApply::here()`. The module applies the answer to the key:
+
+| In the answer | What it does to the key |
+| --- | --- |
+| `Schema::any()` | nothing: these values add no rule |
+| `minimum()`, `maximum()`, `minLength()`, `maxLength()`, `minItems()`, `maxItems()` | of the answer's bound and the key's, the stricter stands |
+| `Schema::enum([...])` | keeps only these of the key's values, in the key's order and with its labels; `Schema::enum([])` keeps none |
+| `Schema::options([...])` | the list for these values, in its order and with its labels; it holds no value the key's list does not offer |
+| `pattern()` | a pattern, where the key has none |
+| `required()` | the key must hold a value |
+| `check('drupal:<id>', [...])` | adds the named check; one the key already holds with other options is refused |
+| `title()`, `description()` | the label and the text under the field, for these values |
+
+An answer cannot widen: nothing in it removes a rule the key has, so of
+two rules the stricter stands. The build refuses what it can know ahead:
+a static refiner that watches nothing and whose answer would widen what
+the key declares. An answer need not carry the key's default or
+examples: the key keeps its own.
+
+A refiner that reads what the key allows asks for it with a first
+parameter typed `Schema`, before the watched siblings. It is handed the
+key's schema as it stands; two reads on it are promised: a standard
+keyword through `get()` (`$key->get('maximum')`), and the list of values
+with their labels through `ChoiceSet::of($key)`. Nothing else on it is
+promised, and nothing written to it reaches the key: only the answer
+does.
 
 ### Static and runtime refiners
 
@@ -260,16 +299,16 @@ of rule, and a refiner says which it is:
 
 ```php
 #[RefinesInput('room')]
-public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface
+public static function roomInVenue(string $venue): Schema
 
 #[RefinesInput('room', runtime: TRUE)]
-public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface
+public function openRooms(Schema $room, string $venue): Schema
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 - **Static, the default.** A pure function of the siblings it watches:
-  the same values in, the same definition out, whatever is stored,
+  the same values in, the same schema out, whatever is stored,
   whoever asks and whenever. That is a promise the module relies on:
   the served contract runs a static refiner ahead of time, for every
   value its watched siblings could take, and writes each answer down as
@@ -426,8 +465,8 @@ that goes out monthly. A refiner says so by answering
 use Drupal\surface\Refinement\DoesNotApply;
 
 #[RefinesInput('send_day')]
-public static function sendDayOnlyWhenWeekly(DataDefinitionInterface $send_day, string $frequency): DataDefinitionInterface|DoesNotApply {
-  return $frequency === 'weekly' ? $send_day : DoesNotApply::here();
+public static function sendDayOnlyWhenWeekly(string $frequency): Schema|DoesNotApply {
+  return $frequency === 'weekly' ? Schema::any() : DoesNotApply::here();
 }
 ```
 
@@ -442,7 +481,7 @@ required choice of three days, and the refiner says where it applies.
   held to the same enforcement, and enumerated by the served contract
   like any static refiner. Once a key does not apply, nothing after it
   runs, and nothing may make it apply again.
-- **The return type is the declaration.** `DataDefinitionInterface|DoesNotApply`
+- **The return type is the declaration.** `Schema|DoesNotApply`
   tells the build, the full schema and the tool before anything runs that
   the key may be ruled out, which is how they keep it out of `required`
   where they cannot say where it applies. A method that answers it
@@ -450,8 +489,8 @@ required choice of three days, and the refiner says where it applies.
 - **Any key**: a key of the class's own, a key an alter mounted (the
   alter's refiner on its own key), and the key an attached child or
   variants are attached at. A parent's refiner of a key holding a child may only
-  answer that it does not apply; anything else it hands back must be
-  what it was handed.
+  answer that it does not apply; any other answer must be
+  `Schema::any()`.
 
 What each door does with it, for a monthly bulletin with `friday`
 stored:
@@ -476,11 +515,13 @@ applies and has nothing to say
 
 ## The narrowing table
 
-Every refiner link, and every constraint an operation adds, is checked
-against what it was handed before its answer is used. The check is
-deliberately conservative: it is applied to arbitrary constraints
-written by arbitrary modules, and a wrong "this is narrower" is worse
-than a refused refinement.
+A refiner's answer can only add, so it narrows by its shape
+([What an answer says](#what-an-answer-says)). A constraint an operation
+adds with `OperationContext::withConstraint()` is a Typed Data
+constraint, and it is checked against the key before it is used. The
+check is deliberately conservative: it is applied to arbitrary
+constraints written by arbitrary modules, and a wrong "this is
+narrower" is worse than a refused constraint.
 
 | Change | Verdict |
 | --- | --- |
@@ -489,55 +530,30 @@ than a refused refinement.
 | Raising a `Length`, `Range` or `Count` minimum, lowering its maximum | narrower |
 | Adding a `Length`, `Range` or `Count` bound where there was none | narrower |
 | Changing or dropping a `Length` or `Count` `exactly` | **refused** |
-| Sharpening a label, description, default or example | neither, and allowed |
-| Refining the variants' placeholder, an `any` marked with its deciding key, to the chosen variant's map | narrower |
-| Changing the data type to one of its derivatives (`entity` to `entity:node` to `entity:node:article`) | narrower |
-| Changing the data type any other way | **refused** |
-| Turning off the required flag | **refused** |
-| Removing a constraint | **refused** |
-| Dropping a choice constraint's list of values | **refused** |
 | Adding values to a list of allowed values | **refused** |
 | Replacing the options of any other constraint | **refused** |
-| Adding or removing a map property | **refused** |
-| Answering that the key does not apply (`DoesNotApply::here()`) | narrowest: nothing is compared after it |
-| Making a key that did not apply apply again | **refused** |
 | Any of the above, inside a map property or a list item | as above |
-
-A derivative is narrower because every value of `entity:node` is a value
-of `entity`; the derivative's own properties are its type's to compute,
-so only the base's own required flag and constraints are compared, as
-they are from `any`. `string_long` is not a derivative of `string`: the
-test is the base type followed by a colon.
 
 The conservatism lives in the replaced-options row: two `Regex` patterns
 cannot be compared for containment, so replacing one is refused rather
-than guessed at. A refiner that needs a different pattern advertises the
-narrower one in the first place. For `Length`, `Range` and a list's
+than guessed at, and an answer's second `pattern()` on a key that has
+one is refused for the same reason. For `Length`, `Range` and a list's
 `Count` only the bounds are compared (`min`, `max`, and Symfony's
 `exactly`, which only narrows by staying what it was), because the rest
-of their options are messages. `Count` joined the comparison with
-collections, whose Count the parent narrows
-(why: [decision](decisions.md#count-is-the-parents)); before, a changed
-`Count` was compared whole and refused.
+of their options are messages
+(why: [decision](decisions.md#count-is-the-parents)).
 
 A collection's parent may narrow the list and not its items: a refiner
-of the list key that narrows inside the item it is handed is refused,
-naming the key ([Collections](resources.md#collections)).
+of the list key whose answer holds `items` is refused, naming the key
+([Collections](resources.md#collections)).
 
-Inside a map the table recurses, which is what holds an attached
-structure to it: the child narrows its own keys, and the map its parent
-advertises narrows with them. Refining the placeholder to a map is how
-variants resolve to the variant their deciding key chose (see
-[Attached structures](resources.md#children)); it is the only `any` that
-may become another type, and no key a blueprint declares is `any`.
-
-A refusal is a `\LogicException` naming the key, the contributor and
-what widened:
-
-> Refining "variant" for the surface_examples_extras contribution
-> widened what it was given: the LabeledChoice constraint gained the
-> values bold. Refinement may only narrow; widening is a build-time act,
-> and the build is over.
+An attached structure narrows its own keys, and the map its parent
+advertises narrows with them. Variants resolve to the variant their
+deciding key chose: the key at the variants is a placeholder that
+allows any value until the deciding key holds one, and it is the only
+key that may become another type (see
+[Attached structures](resources.md#children)); no key a blueprint
+declares allows any value.
 
 Two more checks belong to the same contract. Building refuses a
 resource or structure in which a key refines, directly or indirectly,
@@ -548,13 +564,13 @@ sealed data surface is only read: refinement returns a new data surface
 rather than changing the one it was asked of.
 
 What the build step seals is a `DefinitionMap`: one `Entry` per
-key, in declaration order, carrying that key's definition, its
+key, in declaration order, carrying that key's schema, its
 contributor, its locked state, its refinement edges, the values
 contributed to it and the refiner chains bound to it. The map checks
 the rest once, as it is built: a key declared twice, or a
 refinement edge naming a key nobody declared, is refused there.
 Refinement then rebuilds the map one entry at a time through `with()`,
-replacing only the definition, so a narrowed data surface cannot lose
+replacing only the schema, so a narrowed data surface cannot lose
 track of who owns what.
 
 ## Cacheability
@@ -568,7 +584,7 @@ that rendering holds. A data surface is therefore a
 enters it:
 
 - **The blueprint.** `BlueprintInterface::addCacheableDependency()` in
-  `defineInputs()`, for anything the definitions themselves were read
+  `defineInputs()`, for anything the keys themselves were read
   from: a key offered only while a module is installed, a label read
   from configuration.
 - **Refiners.** A static `#[RefinesInput]` method calls no service and
@@ -630,13 +646,14 @@ a fifth value, and a refiner of its own for it:
 #[Alters(ExampleFormatter::class)]
 final class ExampleFormatterAlter implements AltersInputsInterface {
 
-  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);
-  }
+  // The constant, the constructor and alterInputs() are shown above.
 
+  /**
+   * A ribbon only makes sense in upper case.
+   */
   #[RefinesInput('variant')]
-  public static function ribbonInUpperCase(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
-    return $casing === 'uppercase' ? $variant : $variant->addConstraint('LabeledChoice', ['choices' => []]);
+  public static function ribbonInUpperCase(string $casing): Schema {
+    return $casing === 'uppercase' ? Schema::any() : Schema::enum([]);
   }
 
 }
@@ -661,9 +678,9 @@ that one of them belongs to the extras module. At refinement time:
 
 Read the two refiners and notice what neither of them had to do. The
 formatter's refiner never mentions `ribbon`, and could not have kept it
-even if it tried: it is not in the list it is handed. The extras
-refiner never mentions `bold`: it is handed one value, and all it
-decides is whether that value survives. Neither module has to know the
+even if it tried: its answer applies to the formatter's own values. The
+extras refiner never mentions `bold`: its answer applies to one value,
+and all it decides is whether that value survives. Neither module has to know the
 other exists, and the select, the validator and any machine reading the
 contract all see the same five values, narrowed the same way.
 
@@ -672,8 +689,7 @@ contract all see the same five values, narrowed the same way.
 
 - **Nested keys.** A refiner refines a whole key. There is no dotted
   path to refine one property inside a map on its own; the method
-  refining the map narrows the property inside what it returns, and
-  the check descends into it. Dotted refinement paths (decision D6) are
+  refining the map answers a schema with `properties` for it. Dotted refinement paths (decision D6) are
   where that lands.
 - **An alter watches only the keys it mounted.** An alter's
   `#[RefinesInput]` method may refine and watch the keys it mounted, by

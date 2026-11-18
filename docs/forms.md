@@ -216,10 +216,13 @@ its input, and a help text:
 public static function defineInputs(BlueprintInterface $inputs): void {
   $workflow = ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE);
 
-  $inputs->add('status', 'boolean', t('Published'), default: TRUE);
+  $inputs->add('status', Schema::bool()
+    ->title(t('Published'))
+    ->default(TRUE));
   $inputs->describe('status', group: $workflow);
 
-  $inputs->add('rate', 'integer', t('Hourly rate'));
+  $inputs->add('rate', Schema::integer()
+    ->title(t('Hourly rate')));
   $inputs->describe('rate',
     placeholder: t('For example, 40'),
     prefix: '$',
@@ -283,11 +286,11 @@ groups its resource declares into core's vertical tabs, reaching each by
 ## A widget a structure asks for
 
 A structure asks for the widget that draws it as a whole with
-`#[Structure(widget:)]`, the one word a key's `widget` setting uses
-(`setSetting('widget', 'radios')`): the build sets it on the key
+`#[Structure(widget:)]`, the one word a key's `ui(widget:)` uses
+(`ui(widget: 'radios')`): the build sets it on the key
 wherever the structure is attached, unless the owner set one there, and
 the hint `x-portable-ui.widget` says it. A shape's `schema()` states the
-word as its hint (`->ui('radios')`), which every key of the shape starts
+word as its hint (`->ui(widget: 'radios')`), which every key of the shape starts
 from. A
 widget draws and reads back; what is accepted is the keys' definitions,
 which the pipeline holds every door to. Three guards hold that:
@@ -1229,7 +1232,8 @@ operation's own constraint, or its access class's answer
 A seed may be a reference to a variable of the route's own path, so the
 URL says which value a key is fixed to or starts from. The inquiry's
 `department` is a key that refers to a term of the departments
-vocabulary (`add('department', 'integer', ...)` with `SurfaceValidReference`,
+vocabulary (`add('department', Schema::integer()...)` with a
+`drupal:SurfaceValidReference` check,
 `['entityTypeId' => 'taxonomy_term', 'bundles' => ['departments']]`):
 
 ```yaml
@@ -1679,8 +1683,8 @@ A swap must also keep the shape the element posts. The widget that drew
 the element reads the value back from what it posts, in the
 definition's shape, and the cosmetic layer runs after the widget has
 chosen the element, never instead of it. Radios and checkboxes need no
-swap at all now: they are stock widgets, asked for on the definition
-(`setSetting('widget', 'radios')`), and a list of a few choices is
+swap at all now: they are stock widgets, asked for on the key's schema
+(`ui(widget: 'radios')`), and a list of a few choices is
 checkboxes unasked ([Widgets](widgets.md#which-element-a-list-of-choices-is)).
 Asked for there, the element is the same at every door: the served
 contract says `radios` or `checkboxes`, and the React app draws them,

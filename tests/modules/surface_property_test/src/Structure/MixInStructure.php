@@ -19,11 +19,11 @@ final class MixInStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('visibility', Schema::enum(['public', 'private'])
+    $inputs->add('visibility', Schema::enum(['public', 'private'])
       ->title(t('Visibility'))
       ->default('public'));
 
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->required());
 

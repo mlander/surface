@@ -24,7 +24,7 @@ final class WideningRefinerStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title('Name')
       ->maxLength(10)
       ->required());

@@ -29,7 +29,7 @@ final class LooseningBadgeAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('badge', Schema::string()
+    $inputs->add('badge', Schema::string()
       ->title($this->t('Badge')));
     $inputs->narrow('limit')
       ->when(Condition::present('badge'))

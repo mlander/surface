@@ -22,7 +22,7 @@ final class WeeklyScheduleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('send_day', Schema::enum(['monday', 'friday'])
+    $inputs->add('send_day', Schema::enum(['monday', 'friday'])
       ->title('Send day')
       ->default('monday')
       ->required());

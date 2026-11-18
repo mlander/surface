@@ -19,10 +19,10 @@ final class BinResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('bin', Schema::string()
+    $inputs->add('bin', Schema::string()
       ->title('Bin')
       ->required());
-    $inputs->addSchema('size', Schema::integer()
+    $inputs->add('size', Schema::integer()
       ->title('Size')
       ->default(5)
       ->minimum(1)

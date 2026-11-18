@@ -70,8 +70,8 @@ install; read it first.
   narrowing them, a rule declared as data, a key that does not apply,
   the narrowing table, cacheability, a worked example, and what it does
   not reach yet.
-- [Options and resolvers](options.md): `LabeledChoice`, the resolver
-  plugin type, the stock resolvers.
+- [Options and resolvers](options.md): a labeled list of values,
+  `Schema::options()`, the resolver plugin type, the stock resolvers.
 - [Storage](storage.md): what storage is, prepare and commit, the
   engine storage classes (a simple config object first), config schema,
   settings layouts, secrets, the serialization rule.

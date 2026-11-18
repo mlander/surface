@@ -7,8 +7,8 @@ namespace Drupal\surface\Resource\Attribute;
 /**
  * On a property: an input key, one value or a list of them.
  *
- * The spelling of add(), and with `list:` of addList(), on a class that
- * uses DeclaresByProperties. The key is the property's name, its default
+ * The spelling of add(), and with `list:` of a Schema::list(), on a class
+ * that uses DeclaresByProperties. The key is the property's name, its default
  * the property's initializer, and its type the property's type: `string`,
  * `int`, `float`, `bool` or a shape's class. `type:` names any other type
  * add() takes (`email`, `uri`, `datetime_iso8601`, `timestamp`,
@@ -30,7 +30,7 @@ namespace Drupal\surface\Resource\Attribute;
  * Decision: see docs/decisions.md#a-class-may-declare-its-keys-as-properties.
  *
  * @see \Drupal\surface\Resource\BlueprintAdditionsInterface::add()
- * @see \Drupal\surface\Resource\BlueprintAdditionsInterface::addList()
+ * @see \PortableSchema\Builder\Attribute\Schema
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 class Input {

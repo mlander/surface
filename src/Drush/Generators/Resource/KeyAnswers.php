@@ -6,6 +6,7 @@ namespace Drupal\surface\Drush\Generators\Resource;
 
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\BlueprintInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Declares the keys an interview answered, as the generated class will.
@@ -60,26 +61,40 @@ final class KeyAnswers {
         self::REFERENCE => (string) $key['id_type'],
         default => (string) $key['type'],
       };
-      $definition = $inputs->add((string) $key['key'], $type, (string) $key['label'], default: $key['default'] ?? NULL);
-      if ($key['type'] === self::REFERENCE) {
-        $definition->addConstraint(References::CONSTRAINT, ['entityTypeId' => (string) $key['refers_to']]);
-      }
+      $schema = match ($type) {
+        'integer' => Schema::integer(),
+        'float' => Schema::number(),
+        'boolean' => Schema::bool(),
+        'email' => Schema::string()->format('email'),
+        'uri' => Schema::string()->format('uri'),
+        'datetime_iso8601' => Schema::string()->format('date-time'),
+        'timestamp' => Schema::of('portable:timestamp'),
+        default => Schema::string(),
+      };
+      $schema = $schema->title((string) $key['label']);
       if (($key['description'] ?? '') !== '') {
-        $definition->setDescription((string) $key['description']);
+        $schema = $schema->description((string) $key['description']);
       }
-      if (!empty($key['required'])) {
-        $definition->setRequired(TRUE);
+      if ($key['type'] === self::REFERENCE) {
+        $schema = $schema->check('drupal:' . References::CONSTRAINT, ['entityTypeId' => (string) $key['refers_to']]);
       }
       if (isset($key['max_length'])) {
-        $definition->addConstraint('Length', ['max' => (int) $key['max_length']]);
+        $schema = $schema->check('drupal:Length', ['max' => (int) $key['max_length']]);
       }
       $range = array_filter(['min' => $key['min'] ?? NULL, 'max' => $key['max'] ?? NULL], static fn (mixed $bound): bool => $bound !== NULL);
       if ($range !== []) {
-        $definition->addConstraint('Range', $range);
+        $schema = $schema->check('drupal:Range', $range);
       }
       if (!empty($key['choices'])) {
-        $definition->addConstraint('LabeledChoice', ['choices' => $key['choices']]);
+        $schema = $schema->check('drupal:LabeledChoice', ['choices' => $key['choices']]);
       }
+      if (($key['default'] ?? NULL) !== NULL) {
+        $schema = $schema->default($key['default']);
+      }
+      if (!empty($key['required'])) {
+        $schema = $schema->required();
+      }
+      $inputs->add((string) $key['key'], $schema);
     }
   }
 

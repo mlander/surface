@@ -2716,9 +2716,9 @@ Decided 2026-11-12. Two public contracts take their final form: a shape
 is declared as the `Schema` of its one value, and whether a value is
 secret is read from a schema by one class that holds no definition.
 Within one language no served document, refusal or stored value changed
-against 20ef965. Across languages an `addSchema()` text now says the
+against 20ef965. Across languages an `add()` text now says the
 served language, and two spellings are read that were refused: a
-check's message made with `t()` on `addSchema()`, and a shape's
+check's message made with `t()` on `add()`, and a shape's
 `schema()` in place of `define()`.
 
 - **A shape declares `schema()`.** `ShapeInterface` declares `public
@@ -2732,7 +2732,7 @@ check's message made with `t()` on `addSchema()`, and a shape's
   through `Shapes::dataType()`.
 - **One reading of a shape.** `Shapes::declared()` reads the schema as
   an author's schema is read (`SchemaReader::authored()`, at a key of a
-  blueprint of its own, not required), so a shape and `addSchema()`
+  blueprint of its own, not required), so a shape and `add()`
   share one interpretation, and a part the reader does not read as
   written is refused in the reader's words. The definition is said in
   the order a definition is written by hand (type, label, description
@@ -2776,7 +2776,7 @@ check's message made with `t()` on `addSchema()`, and a shape's
   with the shape, not at discovery, which builds nothing.
 - **Text stays lazy through the reader.** Reading never renders an
   object the author holds, for a shape's `schema()` and an
-  `addSchema()` argument alike: a `TranslatableMarkup` keeps the first
+  `add()` argument alike: a `TranslatableMarkup` keeps the first
   language it is rendered in. Every text the reader takes (a title, a
   description, each `x-portable-messages` entry, `check.<name>` among
   them, and the title and description of each option of a `oneOf` list
@@ -2794,17 +2794,17 @@ check's message made with `t()` on `addSchema()`, and a shape's
 - **A text preparing moves stays a string.** The limit: a text whose
   place preparing moved, or whose string it rewrote, stays the string
   its copy rendered to in the language of the build, as every
-  `addSchema()` text was read before. The spellings that reach it are
+  `add()` text was read before. The spellings that reach it are
   contract 4's messages under `x-surface` (`patternMessage`, a
   `checkedOnServer` entry's `message`), which are respelled into
   `x-portable-messages`; a schema `x-surface.within` places; and a rule
   a container states for a child that reads ports, which is moved into
   the child's def. A draft's keywords never reach it, since a `Schema`
-  value cannot hold them. A structure inside an `addSchema()` key is
+  value cannot hold them. A structure inside an `add()` key is
   read from the document form, so its texts are strings, as at
   20ef965.
-- **An `addSchema()` text is lazy as a shape's is.** At 20ef965 the
-  reader rendered an `addSchema()` key's title, description and
+- **An `add()` text is lazy as a shape's is.** At 20ef965 the
+  reader rendered an `add()` key's title, description and
   messages while reading, so they kept the language of the build. They
   now stay lazy: a build in one language served in another says the
   served language's text. Within one language nothing served moves: a
@@ -2817,7 +2817,7 @@ check's message made with `t()` on `addSchema()`, and a shape's
 - **A check's message may be made with `t()`.** A `\Stringable` under
   `check.<name>` is read as the check's constraint's message and stays
   lazy, so a shape's check says what `define()`'s constraint said. The
-  same spelling on `addSchema()` was refused, with a reason that named
+  same spelling on `add()` was refused, with a reason that named
   the wrong cause; it is read now.
 - **A shape's alters stay a definition in, a definition out.** An alter
   narrows and rewords the definition the shape's schema reads into. Its
@@ -6304,7 +6304,7 @@ journal is the first case. Each choice, and why:
   child at a fixed key or in a collection is the owner's child at that
   key); a resource, which stores itself; one with outputs, which are not
   merged. A structure may mix another in.
-  A member declared with `addSchema()` is held as one declared with
+  A member declared with `add()` is held as one declared with
   `add()`: the clash is refused with the same message, and the key is
   one of the owner's (decided 2026-11-17).
 - **Emitted as a composition, so the def stays reusable.** The frame is
@@ -15644,12 +15644,12 @@ app draws it, and reads nothing else to draw.
 ### Authoring takes a Schema
 
 Decided 2026-11-11. An author may state a key as a Portable Schema, with
-`addSchema()` or with the package's property attributes, beside the
+`add()` or with the package's property attributes, beside the
 Typed Data spelling, which stays where storage needs it. Contract 5
 stays 5: the two examples rewritten in the new spelling serve the bytes
 they served.
 
-- **`addSchema()`.** `BlueprintAdditionsInterface::addSchema(string
+- **`add()`.** `BlueprintAdditionsInterface::add(string
   $key, Schema $schema, ?bool $required = NULL): static` takes a
   `Schema` only; a schema held as an array is handed in as
   `Schema::from($array)`. The schema is laid in an object of one
@@ -15671,11 +15671,11 @@ they served.
   `#[Of]` the `$ref`, an `anyOf` of it and null where nullable, a shape
   too, `#[Schema]` keywords, `#[Check]` checks, `#[Ui]` hints), mirroring
   `ClassReader`, which keeps the reading of one property private, and
-  declared with `addSchema()`. A class a keyword names (`items`) is a
+  declared with `add()`. A class a keyword names (`items`) is a
   `$ref` to its `#[Document]` id, or read in place where it has none, as
   `ClassReader` reads it; `#[Of]` naming a class that is no shape and
   has no `#[Document]` is refused, naming the property and the three ways
-  out. Required is `addSchema()`'s rule alone: the property passes
+  out. Required is `add()`'s rule alone: the property passes
   `#[Required]` as TRUE and nothing otherwise.
 - **The package's spelling is an `#[Input]`.** It combines with exactly
   what `#[Input]` combines with in Surface's own spelling. Combined:
@@ -15699,7 +15699,7 @@ they served.
   package's: a protected property carrying the package's attributes is
   read, as Surface reads its own; a static one is refused.
 - **An author's schema is the author's own.** So what it holds and the
-  reader does not read as written is an author error: `addSchema()`,
+  reader does not read as written is an author error: `add()`,
   and the property path naming `Class::$property`, throw
   `\InvalidArgumentException` listing every such part by its pointer (an
   unknown widget, a fractional weight, a message for a code no
@@ -15753,8 +15753,14 @@ they served.
   item a plain map, a list of plain objects inside it too. At an input it
   stays a collection of children (decided 2026-11-17, on the condition
   that the venue listing's served document stays byte-identical, which
-  `ContractBaselineTest` holds). A `portable:timestamp` property is no
-  plain map's yet, since the library's type adds a range.
+  `ContractBaselineTest` holds). A property that is a type of the
+  library (`Schema::of('portable:timestamp')`) is read in such a map as
+  that leaf, with the bound the library's type states. So the stage's
+  `changes` output (`StageChangesStructure::write()` returns a `Schema`
+  now, which `StageAppliedStructure` extends too) serves `staged` with
+  `minimum` and `maximum`, the library's timestamp range, where it
+  served neither; no fixture pins the stage's documents (decided
+  2026-11-17).
 - **Labels stay translatable.** The reader reads a `Schema` an author
   hands it as it is, never through JSON, so a title, description or
   option label made with `t()` stays a `TranslatableMarkup` in the
@@ -15770,7 +15776,7 @@ they served.
   values, as JSON writes them, never a `TypeError`; a float choice is
   served as the float (`ChoiceOptions` keys it as JSON writes it).
 - **A site list holds no boolean schema.** `SiteList::add()` and
-  `addDefs()` refuse `true` and `false` as `addSchema()` does.
+  `addDefs()` refuse `true` and `false` as `add()` does.
 - **Surface's semantics apply to the definition.** Required, where
   `$required` is NULL, is the dialect's rule: no `default` and no null,
   or `required()`. TRUE requires a key that has a default; FALSE leaves
@@ -15813,6 +15819,36 @@ they served.
   `Schema::of(Shape::class)`, alone or with a `default`, as each entry
   being that shape, as `add()` reads the shape's class: a shape is a
   document the key refers to (decided 2026-11-17).
+- **One verb, `add()`.** `addSchema()` is renamed `add()` (decided
+  2026-11-14, built 2026-11-17): `add(string $key, Schema $schema)`
+  returns the blueprint. The old spelling, a type, a label and a
+  default, returning the core definition, is read by the same method
+  until its last callers (the value baseline's test module and the
+  readers that declare through the verbs) are converted; a label or a
+  default handed beside a schema is refused, since the schema says both.
+- **One spelling for the port, the entry and the rule.** `reads()`
+  takes a `Schema` alone, required where it is marked `required()`: the
+  `required:` argument and the type given as a string are gone, and a
+  reader that holds a type by its name hands `LeafTypes::schemaOf()`.
+  `addEach()` takes no `default:`: the entry's schema says it.
+  `Rule::constrain()` takes a `Schema` alone; the constraint and its
+  options as two arguments is gone, and the schema reader hands a rule
+  it reads as the check of its constraint. A rule's bound check with one
+  Symfony message option (`maxMessage`) is read as the rule's message,
+  so only two such options are refused now (decided 2026-11-17, docs
+  answers 8, 9 and 13).
+- **A check given no options.** `check('drupal:Country')` and
+  `check('drupal:Country', [])` are one schema, since the builder writes
+  both as `{}`, so the reader holds both as a constraint given no
+  options (NULL). A constraint an author adds with `[]` to what a verb
+  returns (`addConstraint('Country', [])` on what `addMap()` or
+  `addDefinition()` declares) is held the same way once the owner's
+  declaration and each alter's are done
+  (`BlueprintAdapterBase::settleOptions()`). Core's constraint manager
+  makes the same constraint of NULL and `[]`, so no value is checked
+  otherwise; only how the schema holds the options changed. A
+  definition handed to the builder directly, not through a verb, keeps
+  its options (decided 2026-11-17).
 - **Settings in the author's order.** A key's settings under
   `x-surface-settings` and those its `x-portable-ui` says are held in
   the order the two keywords are written, as `setSetting()` calls hold
@@ -15837,13 +15873,13 @@ they served.
   `property()`, `annotation()`) and answer it; what the reader builds
   from them is unchanged, since a document is read as JSON decodes it.
 - **The examples.** `NewsletterResource` (the first page's budget is
-  now a resource, an operation, a storage and `addSchema()`) and
-  `RegistrationStep1Resource` are written with `addSchema()`;
+  now a resource, an operation, a storage and `add()`) and
+  `RegistrationStep1Resource` are written with `add()`;
   `CateringResource` stays in Surface's attributes. A test module's
   structure spells keys with the package's attributes beside a Typed
   Data twin, and both emit the same documents
   (`SchemaAttributesTest`).
-- **Cost.** `addSchema()` reads each key through the schema reader:
+- **Cost.** `add()` reads each key through the schema reader:
   about 30 µs a key against 1 µs for `add()`, so the two examples build
   and emit 36 to 39 percent slower. It is paid on a build cache miss
   alone, since the static build is cached per language.
@@ -15852,14 +15888,14 @@ they served.
   follow only local `$ref`s, the nullable spelling (`anyOf` of the
   `$ref` and null, or a `type` array) is open, and the reader infers a
   leaf type from `type` and `format`. A shape stated as a `Schema`. One
-  spelling in the docs. The generator writes `addSchema()`. A
+  spelling in the docs. The generator writes `add()`. A
   constraint's accepted types are not declared, so neither `add()` nor
-  `addSchema()` can refuse a check that does not fit the key's type
+  `add()` can refuse a check that does not fit the key's type
   (`drupal:Count` on a string) at build time. A default of the wrong
   type is refused by neither verb. `addMap()` keys named by digits alone
   are served as a list.
 
-(`BlueprintAdditionsInterface::addSchema()`, `SchemaReader::authored()`,
+(`BlueprintAdditionsInterface::add()`, `SchemaReader::authored()`,
 `SchemaReader::$authored`, `SchemaReader::$accepted`,
 `SchemaReader::besideKeywords()`, `SchemaReader::withNull()`,
 `PropertyDeclaration`, `EntrySchemasInterface`, `SiteList`,

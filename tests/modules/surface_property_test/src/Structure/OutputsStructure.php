@@ -20,7 +20,7 @@ final class OutputsStructure implements StructureInterface, DefinesOutputsInterf
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('query', Schema::string()
+    $inputs->add('query', Schema::string()
       ->title(t('Query')));
   }
 
@@ -28,12 +28,12 @@ final class OutputsStructure implements StructureInterface, DefinesOutputsInterf
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('total', Schema::integer()
+    $outputs->add('total', Schema::integer()
       ->title(t('Total'))
       ->description(t('How many matched.'))
       ->required());
 
-    $outputs->addSchema('items', Schema::list(Schema::object([
+    $outputs->add('items', Schema::list(Schema::object([
       'id' => Schema::string()->title(t('Id'))->required(),
       'label' => Schema::string()->title(t('Label')),
     ]))

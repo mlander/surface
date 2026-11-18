@@ -332,11 +332,11 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
   public function defineInputs(BlueprintInterface $inputs, string $entity_type_id, string $bundle, array $overridden = []): void {
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
 
-    $inputs->addSchema('entity_type', Schema::string()
+    $inputs->add('entity_type', Schema::string()
       ->title($this->t('Entity type'))
       ->required());
 
-    $inputs->addSchema('bundle', Schema::string()
+    $inputs->add('bundle', Schema::string()
       ->title($entity_type->getBundleLabel() ?: $this->t('Bundle'))
       ->required());
 
@@ -366,7 +366,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
     $id = ($this->derivation->idType($entity_type_id) === 'integer' ? Schema::integer() : Schema::string())
       ->title($this->t('ID'));
     if (!$this->derivation->callerNamesId($entity_type_id)) {
-      $inputs->addSchema('id', $id
+      $inputs->add('id', $id
         ->description($this->t('Given by storage when the @entity_type is saved.', ['@entity_type' => $singular])));
       return;
     }
@@ -375,7 +375,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
     if (is_int($max) && $max > 0) {
       $id = $id->check('drupal:Length', ['max' => $max]);
     }
-    $inputs->addSchema('id', $id->required());
+    $inputs->add('id', $id->required());
   }
 
   /**
@@ -417,11 +417,11 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
     $bundle_label = $entity_type->getBundleLabel() ?: $this->t('Bundle');
 
-    $inputs->addSchema('entity_type', Schema::string()
+    $inputs->add('entity_type', Schema::string()
       ->title($this->t('Entity type'))
       ->required());
 
-    $inputs->addSchema('bundle', Schema::string()
+    $inputs->add('bundle', Schema::string()
       ->title($bundle_label)
       ->description($this->t('Which @bundle_label the @entity_type is, which chooses its fields.', [
         '@bundle_label' => $bundle_label,
@@ -457,7 +457,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    */
   public function defineOutputs(BlueprintInterface $outputs, string $entity_type_id, string $bundle): void {
     $id = $this->derivation->idType($entity_type_id) === 'integer' ? Schema::integer() : Schema::string();
-    $outputs->addSchema('id', $id
+    $outputs->add('id', $id
       ->title($this->t('ID'))
       ->description($this->t('The id of the @entity_type written, which a new one has only once it is saved.', [
         '@entity_type' => $this->entityTypeManager->getDefinition($entity_type_id)->getSingularLabel(),

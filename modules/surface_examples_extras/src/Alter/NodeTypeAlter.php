@@ -91,14 +91,14 @@ final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutI
         ],
       ]);
     $inputs->addMap(NodeTypeReviewSettings::DEADLINE, $this->t('Review deadline'), function (BlueprintInterface $deadline) use ($unit): void {
-      $deadline->addSchema(NodeTypeReviewSettings::AMOUNT, Schema::integer()
+      $deadline->add(NodeTypeReviewSettings::AMOUNT, Schema::integer()
         ->title($this->t('Amount'))
         ->minimum(1));
       $deadline->addDefinition(NodeTypeReviewSettings::UNIT, $unit, default: NodeTypeReviewSettings::DEFAULT_UNIT);
     })
       ->setDescription($this->t('How long an editor has to review new content of this type, from one hour to thirty days. Leave the amount empty for no deadline.'))
       ->addConstraint('SurfaceExamplesExtrasReviewDeadline', []);
-    $inputs->addSchema(NodeTypeReviewSettings::TAGS, Schema::list(Schema::string()
+    $inputs->add(NodeTypeReviewSettings::TAGS, Schema::list(Schema::string()
       ->title($this->t('Audience tag'))
       ->check('drupal:Regex', [
         'pattern' => NodeTypeReviewSettings::TAG_PATTERN,

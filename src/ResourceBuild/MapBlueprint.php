@@ -156,9 +156,9 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition {
     if ($description !== NULL) {
-      return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
+      return static::stated($this->addEach($key, $type, $from, $label), $description);
     }
     throw $this->framed(sprintf('addEach("%s")', $key));
   }

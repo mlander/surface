@@ -463,8 +463,8 @@ setting:
   `surface_store_references_by_uuid(MyResource::class, 'configure')`
   reads and writes the object through its storage.
 - **To keep the id**, the key says so:
-  `->setSetting(References::STORED_AS, References::BY_ID)` (on a bare
-  key, on the key itself). That is right only where the config never
+  `->annotation('x-surface-settings', [References::STORED_AS => References::BY_ID])`
+  on the key's schema (on a bare key, on the key itself). That is right only where the config never
   leaves the site, or where every site gives the entity the same id by
   other means (a migration that keeps ids).
 
@@ -676,8 +676,8 @@ and what its doors answer may change in any commit, and nothing is
 migrated. [What is promised](evolution.md#what-is-promised) says what
 the module does promise.
 
-Variants at a key whose map says
-`->setSetting(Variants::STORED_AS, Variants::FLAT)` are stored with the
+Variants at a key attached with
+`attachVariants(..., storedAs: Variants::FLAT)` are stored with the
 chosen variant's keys beside the deciding key and nothing at the key,
 while every door asks for them under the key
 ([Stored flat](resources.md#stored-flat)). The layout

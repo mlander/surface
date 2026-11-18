@@ -22,7 +22,7 @@ final class ThatchStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('depth', Schema::integer()
+    $inputs->add('depth', Schema::integer()
       ->title(t('Depth'))
       ->minimum(1));
   }

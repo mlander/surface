@@ -58,12 +58,12 @@ final class ExampleFormatter extends TypedFormatterBase implements StructureInte
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('prefix', Schema::string()
+    $inputs->add('prefix', Schema::string()
       ->title(t('Prefix'))
       ->description(t('Text placed before each value.'))
       ->maxLength(10));
 
-    $inputs->addSchema('casing', Schema::options([
+    $inputs->add('casing', Schema::options([
       'none' => t('As written'),
       'uppercase' => t('Upper case'),
       'lowercase' => t('Lower case'),
@@ -73,7 +73,7 @@ final class ExampleFormatter extends TypedFormatterBase implements StructureInte
       ->default('none')
       ->required());
 
-    $inputs->addSchema('variant', Schema::options(ExampleVariant::choices())->type('string')
+    $inputs->add('variant', Schema::options(ExampleVariant::choices())->type('string')
       ->title(t('Variant'))
       ->description(t('The variants the chosen casing offers.')));
   }
@@ -82,12 +82,12 @@ final class ExampleFormatter extends TypedFormatterBase implements StructureInte
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('text', Schema::string()
+    $outputs->add('text', Schema::string()
       ->title(t('Text'))
       ->description(t('The field value, prefixed and cased as the settings ask.'))
       ->required());
 
-    $outputs->addSchema('classes', Schema::list(Schema::string()->title(t('Class')))
+    $outputs->add('classes', Schema::list(Schema::string()->title(t('Class')))
       ->title(t('Classes'))
       ->description(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
   }

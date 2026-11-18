@@ -20,12 +20,12 @@ final class FeesStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('standard', Schema::number()
+    $inputs->add('standard', Schema::number()
       ->title(t('Standard fee'))
       ->default(20.0)
       ->minimum(0));
 
-    $inputs->addSchema('concession', Schema::number()
+    $inputs->add('concession', Schema::number()
       ->title(t('Concession fee'))
       ->default(10.0)
       ->minimum(0));

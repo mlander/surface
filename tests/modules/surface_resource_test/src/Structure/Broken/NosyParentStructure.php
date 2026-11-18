@@ -19,7 +19,7 @@ final class NosyParentStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('pantry', Schema::string()
+    $inputs->add('pantry', Schema::string()
       ->title('Pantry'));
     $inputs->attach('nosy', NosyChildStructure::class);
   }

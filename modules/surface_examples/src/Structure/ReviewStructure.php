@@ -24,7 +24,7 @@ final class ReviewStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('reviewed_on', Schema::string()
+    $inputs->add('reviewed_on', Schema::string()
       ->title(t('Reviewed on'))
       ->description(t('YYYY-MM-DD.'))
       ->check('drupal:Regex', [
@@ -33,7 +33,7 @@ final class ReviewStructure implements StructureInterface {
       ])
       ->ui(widget: 'date'));
 
-    $inputs->addSchema('reviewed_by', Schema::string()
+    $inputs->add('reviewed_by', Schema::string()
       ->title(t('Reviewed by')));
 
     $inputs->narrow('reviewed_by')

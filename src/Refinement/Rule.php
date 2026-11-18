@@ -23,7 +23,7 @@ use Drupal\surface\Contract\PatternTranslation;
  * @code
  * $inputs->narrow('capacity')
  *   ->when(Condition::absent('license'))
- *   ->constrain('Range', ['max' => 100])
+ *   ->constrain(Schema::keywords(['maximum' => 100]))
  *   ->because(t('Up to 100 without an event license.'));
  * @endcode
  *
@@ -33,15 +33,16 @@ use Drupal\surface\Contract\PatternTranslation;
  * Schema spelling, so the full schema states the rule as a conditional
  * without running it:
  *
- * - constrain('Range', [min, max, message]): raises the minimum, lowers
- *   the maximum; `minimum`, `maximum`. `Length` and `Count` the same,
- *   for a text's length and a list's items; `minLength`, `maxItems` and
- *   so on. The message, if any, is what a value outside the rule's
- *   bound is refused with.
- * - constrain('Choice' or 'LabeledChoice', [choices]): keeps only these
- *   of the key's own values; the `oneOf` of what stays.
- * - constrain('Regex', [pattern, message]): a pattern, where the key has
- *   none; `pattern`.
+ * - constrain() with `minimum` or `maximum` (a Range): raises the
+ *   minimum, lowers the maximum. `minLength`, `maxLength` (a Length) and
+ *   `minItems`, `maxItems` (a Count) the same, for a text's length and a
+ *   list's items. A message, if any, is the bound's check's
+ *   (`check('drupal:Range', ['max' => 100, 'message' => ...])`): what a
+ *   value outside the rule's bound is refused with.
+ * - constrain() with `enum`: keeps only these of the key's own values;
+ *   the `oneOf` of what stays.
+ * - constrain() with `pattern`, or a `drupal:Regex` check with its
+ *   message: a pattern, where the key has none.
  * - require(): the key must hold a value; `required`, and its type
  *   without `null`.
  * - doesNotApply(): the key does not apply; the key `false`.
@@ -186,15 +187,8 @@ final class Rule {
    * written under the option each bound that stands is refused in, as a
    * rule's message always is.
    *
-   * The constraint and its options, as two arguments, is the form before
-   * a rule took a Schema; it stays for the readers that build rules from
-   * a document and from property attributes.
-   *
-   * @param \PortableSchema\Builder\Schema|string $constraint
-   *   What the rule adds; or, in the earlier form, the constraint.
-   * @param array $options
-   *   In the earlier form, the constraint's options; nothing with a
-   *   Schema.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What the rule adds.
    *
    * @return $this
    *
@@ -202,11 +196,8 @@ final class Rule {
    *   For a keyword, a constraint or an option outside the vocabulary, or
    *   a pattern no schema can state exactly.
    */
-  public function constrain(Schema|string $constraint, array $options = []): static {
-    if (is_string($constraint)) {
-      return $this->constrainBy($constraint, $options);
-    }
-    foreach (static::constraintsOf($this->key, $constraint) as [$name, $read]) {
+  public function constrain(Schema $schema): static {
+    foreach (static::constraintsOf($this->key, $schema) as [$name, $read]) {
       $this->constrainBy($name, $read);
     }
     return $this;
@@ -304,26 +295,26 @@ final class Rule {
     if ($unknown !== [] || $options === []) {
       $takes = self::CONSTRAINTS[$constraint];
       $last = array_pop($takes);
-      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') takes %s, and was given %s.', $this->key, $constraint, $takes === [] ? $last : implode(', ', $takes) . ' and ' . $last, $options === [] ? 'nothing' : implode(', ', array_keys($options))));
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() states a %s, which takes %s, and was given %s.', $this->key, $constraint, $takes === [] ? $last : implode(', ', $takes) . ' and ' . $last, $options === [] ? 'nothing' : implode(', ', array_keys($options))));
     }
     if (isset(self::BOUND_MESSAGES[$constraint]) && !array_key_exists('min', $options) && !array_key_exists('max', $options)) {
-      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') was given a message and no bound: its message is what a value outside the rule\'s min or max is refused with.', $this->key, $constraint));
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() states a %s with a message and no bound: its message is what a value outside the rule\'s min or max is refused with.', $this->key, $constraint));
     }
     if (array_key_exists('message', $options) && (!is_string($options['message']) && !$options['message'] instanceof \Stringable || (string) $options['message'] === '')) {
-      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') takes a message that says something, written with t().', $this->key, $constraint));
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() states a %s, which takes a message that says something, written with t().', $this->key, $constraint));
     }
     foreach (['min', 'max'] as $bound) {
       if (array_key_exists($bound, $options) && (!is_int($options[$bound]) && !is_float($options[$bound]))) {
-        throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') takes a number for %s.', $this->key, $constraint, $bound));
+        throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() states a %s, which takes a number for %s.', $this->key, $constraint, $bound));
       }
     }
     if (in_array($constraint, ChoiceSet::CONSTRAINTS, TRUE) && (!is_array($options['choices'] ?? NULL) || $options['choices'] === [])) {
-      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') takes the values of the key\'s own list to keep, at least one; a key that holds nothing at all is doesNotApply().', $this->key, $constraint));
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() states a %s, which takes the values of the key\'s own list to keep, at least one; a key that holds nothing at all is doesNotApply().', $this->key, $constraint));
     }
     if ($constraint === 'Regex') {
       $pattern = $options['pattern'] ?? NULL;
       if (!is_string($pattern) || PatternTranslation::ecma($pattern) === NULL) {
-        throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'Regex\') was given a pattern no JSON Schema can state exactly: a declared pattern stays inside the subset both engines read alike (docs/decisions.md#a-pattern-both-engines-read-alike). A rule whose pattern cannot is a #[RefinesInput] method.', $this->key));
+        throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() states a Regex with a pattern no JSON Schema can state exactly: a declared pattern stays inside the subset both engines read alike (docs/decisions.md#a-pattern-both-engines-read-alike). A rule whose pattern cannot is a #[RefinesInput] method.', $this->key));
       }
     }
     if (in_array($constraint, ChoiceSet::CONSTRAINTS, TRUE)) {

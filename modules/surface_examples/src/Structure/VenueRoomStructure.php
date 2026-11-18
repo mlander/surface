@@ -22,7 +22,7 @@ final class VenueRoomStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title(t('Room id'))
       ->check('drupal:Regex', [
         'pattern' => '/^[a-z0-9_]+$/D',
@@ -31,12 +31,12 @@ final class VenueRoomStructure implements StructureInterface {
       ->maxLength(64)
       ->required());
 
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Room name'))
       ->maxLength(128)
       ->required());
 
-    $inputs->addSchema('seats', Schema::integer()
+    $inputs->add('seats', Schema::integer()
       ->title(t('Seats'))
       ->minimum(1)
       ->maximum(10000)

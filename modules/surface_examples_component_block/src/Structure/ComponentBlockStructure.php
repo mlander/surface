@@ -38,7 +38,7 @@ final class ComponentBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('component', Schema::string()
+    $inputs->add('component', Schema::string()
       ->title(t('Component')));
 
     $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);

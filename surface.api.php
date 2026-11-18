@@ -14,7 +14,7 @@ declare(strict_types=1);
 /**
  * Alters the discovered data surface widget plugin definitions.
  *
- * A widget maps one data definition to a form element and back. Widgets are
+ * A widget maps one key's schema to a form element and back. Widgets are
  * selected by applicability with weight as the tiebreaker, lower first, so the
  * usual reason to alter a definition is to put one widget in front of or
  * behind another module's.
@@ -38,7 +38,7 @@ function hook_surface_widget_info_alter(array &$definitions): void {
  *
  * A resolver reads one validation constraint as the list of values it allows,
  * with their labels and their cacheability. Every resolver that applies to a
- * definition's constraints is consulted and the answers are intersected, so
+ * key's constraints is consulted and the answers are intersected, so
  * removing a definition here removes a way of reading a constraint from the
  * whole site.
  *
@@ -76,19 +76,21 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * surface.resources), is the only thing that builds either. The class
  * is never instantiated: its inputs and its refiners are static, called on
  * the class, so it has no constructor and holds no service, and a list
- * that depends on the site is a constraint whose options resolver fetches
- * it. Labels are built with the global t(), since a static method has
+ * that depends on the site is a named check whose options resolver
+ * fetches it. Labels are built with the global t(), since a static method has
  * nothing a translation service could be injected into.
  *
  * Each part of a resource has one home:
  * - Its keys, in static defineInputs(): a flat list, no conditionals,
- *   never naming a sibling. add() takes a name, a type and a label and
- *   returns the core definition, so the rest is core API.
+ *   never naming a sibling. add() takes a name and a
+ *   \PortableSchema\Builder\Schema, its type, title, default and rules,
+ *   and returns the blueprint. A key is required only when its schema
+ *   says required().
  * - A key whose allowed values depend on another key's value, in a static
  *   method carrying \Drupal\surface\Resource\Attribute\RefinesInput.
- *   It takes the key's definition first and one parameter per sibling it
- *   watches, and returns the definition narrowed. The framework checks it
- *   narrowed.
+ *   It takes one parameter per sibling it watches, and returns a Schema of
+ *   what those values add to the key, Schema::any() for nothing, or
+ *   DoesNotApply::here(). Of its rule and the key's, the stricter stands.
  * - How it is asked for, with
  *   \Drupal\surface\Resource\Attribute\Operation: its id, label,
  *   description, permission and whether it creates. On the class for an
@@ -136,23 +138,24 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *   }
  *
  *   public static function defineInputs(BlueprintInterface $inputs): void {
- *     $inputs->add('id', 'string', t('Machine name'))
- *       ->setRequired(TRUE);
- *     $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
- *       ->setRequired(TRUE)
- *       ->addConstraint('PluginExists', [
+ *     $inputs->add('id', Schema::string()
+ *       ->title(t('Machine name'))
+ *       ->required());
+ *     $inputs->add('entity_type', Schema::string()
+ *       ->title(t('Entity type'))
+ *       ->default('user')
+ *       ->check('drupal:PluginExists', [
  *         'manager' => 'entity_type.manager',
  *         'interface' => ContentEntityInterface::class,
- *       ]);
- *     $inputs->add('bundle', 'string', t('Bundle'));
+ *       ])
+ *       ->required());
+ *     $inputs->add('bundle', Schema::string()
+ *       ->title(t('Bundle')));
  *   }
  *
  *   #[RefinesInput('bundle')]
- *   public static function bundleOfEntityType(
- *     DataDefinitionInterface $bundle,
- *     string $entity_type,
- *   ): DataDefinitionInterface {
- *     return $bundle->addConstraint('EntityBundleExists', [
+ *   public static function bundleOfEntityType(string $entity_type): Schema {
+ *     return Schema::any()->check('drupal:EntityBundleExists', [
  *       'entityTypeId' => $entity_type,
  *     ]);
  *   }
@@ -161,9 +164,10 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * @endcode
  *
  * Children are attach() for a fixed child, attachVariants() for variants a
- * sibling key chooses between and attachList() for a collection. attach()
- * and attachVariants() return the map definition at the key, which the
- * owner labels with the core setters. Variants are always open: every
+ * sibling key chooses between and attachList() for a collection. Each
+ * returns the blueprint, and takes the key's description: as a named
+ * argument, attach() and attachVariants() also storedAs:, attachList()
+ * also required:. Variants are always open: every
  * structure carrying \Drupal\surface\Resource\Attribute\Variant for
  * the key is one, and the deciding key's allowed values become exactly
  * those, each offered by its #[Variant] label, else by the structure's own
@@ -199,7 +203,9 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * final class ExampleBlock extends TypedBlockBase implements StructureInterface {
  *
  *   public static function defineInputs(BlueprintInterface $inputs): void {
- *     $inputs->add('headline', 'string', t('Headline'), default: 'News');
+ *     $inputs->add('headline', Schema::string()
+ *       ->title(t('Headline'))
+ *       ->default('News'));
  *   }
  *
  *   public function build(): array {
@@ -263,10 +269,10 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *   anyone is refused;
  * - narrow any key with #[RefinesInput] methods of its own: static, as an
  *   owner's are, or instance methods declaring runtime: TRUE, since an
- *   alter is a service. On a key it offered more values on, a method is
- *   handed this module's values alone, so it can neither narrow away a
- *   value the owner offers nor hand back one it was not given; what is
- *   offered is the union.
+ *   alter is a service. On a key it offered more values on, a method's
+ *   answer applies to this module's values alone, so it can neither
+ *   narrow away a value the owner offers nor offer one it did not add;
+ *   what is offered is the union.
  * Nothing an alter does removes a key or a value.
  *
  * @code
@@ -276,24 +282,19 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *   use StringTranslationTrait;
  *
  *   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
- *     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star')
- *       ->addConstraint('LabeledChoice', [
- *         'choices' => [
- *           'star' => $this->t('Star'),
- *           'flame' => $this->t('Flame'),
- *         ],
- *       ]);
+ *     $inputs->add('badge', Schema::options([
+ *       'star' => $this->t('Star'),
+ *       'flame' => $this->t('Flame'),
+ *     ])
+ *       ->type('string')
+ *       ->title($this->t('Badge'))
+ *       ->default('star'));
  *     $inputs->extendChoices('variant', ['ribbon' => $this->t('Ribbon')]);
  *   }
  *
  *   #[RefinesInput('variant')]
- *   public static function ribbonInUpperCase(
- *     DataDefinitionInterface $variant,
- *     string $casing,
- *   ): DataDefinitionInterface {
- *     return $casing === 'uppercase'
- *       ? $variant
- *       : $variant->addConstraint('LabeledChoice', ['choices' => []]);
+ *   public static function ribbonInUpperCase(string $casing): Schema {
+ *     return $casing === 'uppercase' ? Schema::any() : Schema::enum([]);
  *   }
  *
  * }
@@ -315,7 +316,7 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
 /**
  * @defgroup surface_widget Data surface widget plugins
  * @{
- * Rendering one data definition as a form element, and reading it back.
+ * Rendering one key's schema as a form element, and reading it back.
  *
  * Widgets live in `Plugin/SurfaceWidget` and are declared with the
  * \Drupal\surface\Attribute\SurfaceWidget attribute. The generated
@@ -324,11 +325,12 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * specialized widget undercuts a generic per-type one by declaring a lower
  * weight.
  *
- * A widget reads the definition and nothing else. It never reads the data
- * surface, the host or the storage: everything it needs (type, label,
- * description, whether the value is required, the values it allows) is on
- * the definition, which is what makes one definition render the same way
- * wherever it appears.
+ * A widget reads the key's schema and nothing else. It never reads the
+ * data surface, the host or the storage: everything it needs (type,
+ * label, description, the values it allows) is in the schema, and what
+ * the schema does not say of itself (whether it is required, its pointer)
+ * is on the widget context, which is what makes one key render the same
+ * way wherever it appears.
  *
  * @code
  * #[SurfaceWidget(
@@ -338,13 +340,13 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * )]
  * final class ColorWidget extends SurfaceWidgetBase {
  *
- *   public function isApplicable(DataDefinitionInterface $definition): bool {
- *     return $definition->getDataType() === 'string'
- *       && $definition->getSetting('my_module_color') === TRUE;
+ *   public function isApplicable(Schema $schema, WidgetContext $context): bool {
+ *     return static::types($schema) === ['string']
+ *       && $schema->get('format') === 'color';
  *   }
  *
- *   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
- *     return $this->baseElement($definition) + [
+ *   public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+ *     return $this->baseElement($schema, $context) + [
  *       '#type' => 'color',
  *       '#default_value' => $value ?? '#000000',
  *     ];

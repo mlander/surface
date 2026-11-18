@@ -22,7 +22,7 @@ final class EntryStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('selling', Schema::bool());
 
-    $inputs->addSchema('max', Schema::integer()
+    $inputs->add('max', Schema::integer()
       ->title(t('Most'))
       ->default(10)
       ->minimum(0));

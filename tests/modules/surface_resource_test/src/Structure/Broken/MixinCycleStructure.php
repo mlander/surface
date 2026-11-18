@@ -19,7 +19,7 @@ final class MixinCycleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('first', Schema::string()
+    $inputs->add('first', Schema::string()
       ->title('First'));
     $inputs->mixIn(MixinCycleLoopStructure::class);
   }

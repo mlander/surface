@@ -22,7 +22,7 @@ final class ComputedResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Name'))
       ->maxLength(64)
       ->required());

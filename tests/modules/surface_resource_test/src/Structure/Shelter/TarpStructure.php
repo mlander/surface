@@ -23,7 +23,7 @@ final class TarpStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('size', Schema::integer()
+    $inputs->add('size', Schema::integer()
       ->title(t('Size'))
       ->minimum(1));
   }

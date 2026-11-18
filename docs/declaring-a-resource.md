@@ -32,29 +32,81 @@ from them.
 final class ExampleBlockStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
-      ->setDescription(t('Shown above the featured content.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 50]);
-    DefinitionMetadata::setExamples($headline, ['Quarterly report']);
+    $source = ArrangementGroup::fieldset('source', t('What to feature'));
 
-    $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
-      ->setRequired(TRUE)
-      ->addConstraint('PluginExists', [
+    $inputs->add('headline', Schema::string()
+      ->title(t('Headline'))
+      ->description(t('Shown above the featured content.'))
+      ->default('Featured content')
+      ->maxLength(50)
+      ->examples(['Quarterly report'])
+      ->required());
+    $inputs->describe('headline', placeholder: t('For example, Quarterly report'));
+
+    $inputs->add('entity_type', Schema::string()
+      ->title(t('Entity type'))
+      ->description(t('The type of content to feature.'))
+      ->default('user')
+      ->check('drupal:PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
-      ]);
+      ])
+      ->required());
+    $inputs->describe('entity_type', group: $source);
 
-    $inputs->add('bundle', 'string', t('Bundle'));
-    // ...
+    $inputs->add('bundle', Schema::string()
+      ->title(t('Bundle'))
+      ->description(t('Choose an entity type to see its bundles.')));
+    $inputs->describe('bundle', group: $source);
+
+    $inputs->add('field', Schema::string()
+      ->title(t('Highlight field'))
+      ->description(t('Choose a bundle to pick from its fields.')));
+    $inputs->describe('field', group: $source);
+
+    $inputs->add('limit', Schema::integer()
+      ->title(t('Number of items'))
+      ->description(t('How many items to feature.'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50)
+      ->required());
+    $inputs->describe('limit', weight: 10, suffix: t('items'));
+
+    $inputs->add('presentation', Schema::string()
+      ->title(t('Presentation'))
+      ->description(t('How the items are laid out.'))
+      ->default('list')
+      ->required());
+
+    $inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'),
+      description: t('What the chosen presentation needs.'));
   }
 
   /**
    * The bundle must be one of the chosen entity type's bundles.
    */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
-    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
+  public static function bundleOfEntityType(string $entity_type): Schema {
+    return Schema::any()
+      ->check('drupal:EntityBundleExists', ['entityTypeId' => $entity_type])
+      ->description(t('A @entity_type bundle.', ['@entity_type' => $entity_type]));
+  }
+
+  /**
+   * The field must be one of the chosen bundle's fields.
+   */
+  #[RefinesInput('field')]
+  public static function fieldOfBundle(string $entity_type, string $bundle): Schema {
+    return Schema::any()
+      ->check('drupal:SurfaceExamplesBundleField', [
+        'entityTypeId' => $entity_type,
+        'bundle' => $bundle,
+      ])
+      ->description(t('A field on @entity_type @bundle.', [
+        '@entity_type' => $entity_type,
+        '@bundle' => $bundle,
+      ]));
   }
 
 }
@@ -62,14 +114,15 @@ final class ExampleBlockStructure implements StructureInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-That is `ExampleBlockStructure` in `surface_examples_plugins`, shortened: a
-structure, since the block that names it holds it and stores it. Each
+That is `ExampleBlockStructure` in `surface_examples_plugins`, doc comments
+shortened: a structure, since the block that names it holds it and
+stores it. Each
 part of a resource or structure has one home:
 
 | What | Where |
 | --- | --- |
 | Its id, and which keys say which thing it is | `#[Resource('id', identity: [...])]`; a structure has an id and no identity, `#[Structure('id')]` |
-| Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)`, or properties carrying attributes ([Declared as properties](#declared-as-properties)) |
+| Its keys: each one's schema, with its type, label, default and rules | `static defineInputs(BlueprintInterface $inputs)`, or properties carrying attributes ([Declared as properties](#declared-as-properties)) |
 | What it emits | `static defineOutputs()`, on `DefinesOutputsInterface`; see [Outputs](outputs.md) |
 | A key whose allowed values depend on another key's value | a rule, `$inputs->narrow('key')->when(Condition::...)`, in `defineInputs()`; a static `#[RefinesInput('key')]` method where the effect must be computed ([Declaring a rule](refinement.md#declaring-a-rule)) |
 | How much is already known: add, edit, reuse | `#[Operation]` on the class, or on a static method returning an `OperationContext` when the context needs more |
@@ -89,42 +142,52 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   declares is a property of the class: it takes no values, context or services, and
   static holds it to that by the language.
 - **`defineInputs()` is a flat list.** No `if`, no loop, and it never
-  mentions a sibling. A constraint written there is fully known with no
+  mentions a sibling. A rule written there is fully known with no
   values. Anything that reads another key's value is a rule declared
   with `narrow()`, which is data the build reads, or a `#[RefinesInput]`
   method.
 - **One key, one group of lines.** A key's `add()` (or `attach()`,
-  `narrow()` and the rest) with its chained setters, and a `describe()`
+  `narrow()` and the rest) with its schema, and a `describe()`
   of that key right after it, is one group, and one blank line separates
   each group from the next. A value several keys use (a help link, an
   arrangement group) is computed first, at the top of the method. In a
   method of many keys, a one-line `//` comment names the topic where it
   turns (`// Limits.`); no comment names a single key. The key constants
   above the method are one line each, in one block, with no docblock.
-- **`add()` takes name, type and label** and returns the core
-  definition, so the rest is plain core API: `setRequired()`,
-  `setDescription()`, `addConstraint()`, `setSetting()`. The label is
-  the one every door shows: the form element's title, the tool's
-  property label, the schema's `title`; the description is the text
-  under the element and the property's description.
-  `addList()` is the same for a list of values, `addMap()` for a map,
-  and `addDefinition()` the long form, for one value built by hand
-  ([Maps and lists](#maps-and-lists)). Every verb that declares a key
-  takes its label with it, after what fills the key:
+- **`add()` takes the key's name and its schema** and returns the
+  blueprint. The schema is a `PortableSchema\Builder\Schema`: a
+  starting point that gives the type (`Schema::string()`,
+  `Schema::integer()`, `Schema::options([...])`, `Schema::list(...)`),
+  then `title()`, `description()`, `default()`, the rules
+  (`maxLength()`, `minimum()`, `pattern()`, `check()`), the form's hints
+  (`ui()`) and `required()`. The title is the label every door shows:
+  the form element's title, the tool's property label, the schema's
+  `title`; the description is the text under the element and the
+  property's description. The key is complete at the call: `add()`
+  reads the schema there and refuses there, naming the key and the part
+  it does not read, and nothing changes the key afterwards. A list is
+  `Schema::list()` in `add()`; `addMap()` declares a map, and
+  `addDefinition()` takes a Typed Data definition a host reader holds
+  ([Maps and lists](#maps-and-lists)). Every other verb that declares a
+  key takes its label with it, after what fills the key:
   `attach('contact', ContactStructure::class, t('Contact'))`,
   `attachList()` and `attachVariants()` third, `attachEach()` and
   `addEach()` after `from:`. On the four `attach` verbs it is optional,
   NULL leaving the structure's own; `addEach()` requires one, since its
   values have no structure to borrow a name from. The label is
   `t('...')` with a literal string; see [Translatable
-  strings](#translatable-strings). The type may be a shape's class, a
-  value declared once for every key that asks for it ([Named
-  shapes](#named-shapes)).
-- **A `#[RefinesInput]` method takes the key's definition first, then one
-  parameter per sibling it watches**, matched by name: a parameter that
-  names no declared key is refused, so a renamed one never silently
-  stops watching. Its signature is its dependency declaration.
-  One rule per method, its docblock stating the rule.
+  strings](#translatable-strings). A key's schema may start from a
+  shape, `Schema::of(License::class)`, a value declared once for every
+  key that asks for it ([Named shapes](#named-shapes)). The verbs that
+  attach take the key's `description:` as a named argument, and
+  `attachVariants()` and `attach()` take `storedAs:`.
+- **A `#[RefinesInput]` method takes one parameter per sibling it
+  watches**, matched by name: a parameter that names no declared key is
+  refused, so a renamed one never silently stops watching. Its
+  signature is its dependency declaration. It returns a `Schema` of
+  what those values add to the key, or `DoesNotApply::here()`
+  ([Refinement](refinement.md)). One rule per method, its docblock
+  stating the rule.
 - **The class has no constructor and holds no service**, and is never
   instantiated: the build step calls its static methods on the class,
   and what rides along in a cached form is the class name. Storage
@@ -135,29 +198,30 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
 ### The types a key takes
 
 A key holds one value of a type the contract states a JSON Schema type
-for. `add()` takes one of eight, or a shape or a config schema type that
-is one of them:
+for. The schema handed to `add()` starts from one of these, or from a
+shape or a config schema type that is one of them:
 
-| Type | JSON Schema |
-| --- | --- |
-| `string` | `type: string`; `format: date` where the key asks for the date widget |
-| `email` | `type: string`, `format: email` |
-| `uri` | `type: string`, `format: uri` |
-| `datetime_iso8601` | `type: string`, `format: date-time`; `format: date` for a key that holds a `DateOnly` constraint |
-| `integer`, `timestamp` | `type: integer` |
-| `float` | `type: number` |
-| `boolean` | `type: boolean` |
+| Starting point | JSON Schema | Typed Data type it is held as |
+| --- | --- | --- |
+| `Schema::string()` | `type: string`; `format: date` where the key asks for the date widget | `string` |
+| `Schema::string()->format('email')` | `type: string`, `format: email` | `email` |
+| `Schema::string()->format('uri')` | `type: string`, `format: uri` | `uri` |
+| `Schema::string()->format('date-time')` | `type: string`, `format: date-time` | `datetime_iso8601` |
+| `Schema::integer()` | `type: integer` | `integer` |
+| `Schema::number()` | `type: number` | `float` |
+| `Schema::bool()` | `type: boolean` | `boolean` |
+| `Schema::options([...])`, `Schema::enum([...])` | the type `type()` gives after it, and a list of values | as `type()` says |
 
-A shape's class is the scalar its `schema()` states; a config schema
-type such as `machine_name`, `label`, `path`, `color_hex` or `langcode`
-is the string underneath with the type's constraints. Any other type is
-refused when the blueprint is filled, naming the method for what was
-meant: `attach()` for a group of keys (or `addMap()` for keys only this
-one holds), `addList()` for a list, the id's type and a constraint for
-an entity's id, `addDefinition()` for one value built by hand.
-`addDefinition()` takes one value of a type in the table, and refuses a
-map or a list, naming `addMap()`, `attach()` or `addList()`; a list's
-item is held to the table at every depth. So the contract states a type
+A shape, `Schema::of(License::class)`, is the scalar its `schema()`
+states. A config schema type such as `machine_name`, `label`, `path`,
+`color_hex` or `langcode`, `Schema::of('drupal:config/machine_name')`, is the
+string underneath with the type's constraints. Any other schema is
+refused at the call, naming the method for what was meant: `attach()`
+for a group of keys (or `addMap()` for keys only this one holds), the
+id's type and a `drupal:SurfaceValidReference` check for an entity's
+id. `addDefinition()` takes one value of a type in the table, and
+refuses a map or a list, naming `addMap()`, `attach()` or
+`Schema::list()`; a list's item is held to the table at every depth. So the contract states a type
 for every value the runtime accepts, and is never vaguer than it
 ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 
@@ -168,15 +232,18 @@ coerced is keyed by the type where it is done: each widget's
 `isApplicable()` and `Pipeline\Coercion`.
 
 A key that refers to an entity is one of these, the id as its entity
-type keeps it, with the `SurfaceValidReference` constraint naming the
+type keeps it, with a `drupal:SurfaceValidReference` check naming the
 entity type and the bundles it may be of
 ([Options](options.md#a-key-that-refers-to-an-entity)):
 
 ```php
-$inputs->add('venue', 'string', t('Venue'), default: 'riverside')
-  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue']);
-$inputs->add('page', 'integer', t('Announcement'))
-  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]);
+$inputs->add('venue', Schema::string()
+  ->title(t('Venue'))
+  ->default('riverside')
+  ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue']));
+$inputs->add('page', Schema::integer()
+  ->title(t('Announcement'))
+  ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
 ```
 
 A config entity keeps its id as a string, a content entity whose id
@@ -188,8 +255,8 @@ entity type and an id, which example 16 declares and attaches
 
 ### What declares an object
 
-A key holds one value. An object is declared only by a method that is
-one JSON Schema construct:
+A key holds one value or a list of values. An object is declared only
+by a method that is one JSON Schema construct:
 
 | Method | JSON Schema |
 | --- | --- |
@@ -198,7 +265,7 @@ one JSON Schema construct:
 | `mixIn()` | `allOf` of the structure's def and the owner's properties |
 | `attachVariants()` | `allOf` of `if`/`then`, one per value of the deciding key |
 | `addEach()`, `attachEach()` | an object with one property per thing the site has |
-| `addList()` | `type: array` of one value's items |
+| `add()` with `Schema::list()` | `type: array` of one value's items |
 
 `addDefinition()` takes one value, never a map or a list
 ([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
@@ -249,13 +316,14 @@ plugin's label and description unless it says its own
 
 A value asked for at more than one key, with the same type, the same
 pattern and the same words for it, is declared once as a **shape**: a
-class in the module's `src/Shape/` carrying `#[Shape]`, whose static
-`schema()` returns the Portable Schema of one value, read as
-`addSchema()` reads one ([A key stated as a schema](#declared-as-a-schema)).
+class in the module's `src/Shape/` carrying Portable Schema's
+`#[Document]` attribute with its id, whose static `schema()` returns the
+schema of one value, read as `add()` reads a key's
+([What a key's schema may say](#what-a-keys-schema-may-say)).
 The examples' event license:
 
 ```php
-#[Shape('event.license')]
+#[Document('event.license')]
 final class License implements ShapeInterface {
 
   public static function schema(): Schema {
@@ -272,46 +340,44 @@ final class License implements ShapeInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-A constraint's message is a sentence a person reads, so a translator
+A rule's message is a sentence a person reads, so a translator
 should find it beside every label: a message may be written with
 `t()`, as the license's is; the build hands Symfony its source string,
 which core's validator translates when it refuses a value ([Violation messages are objects](semantics.md#violation-messages-are-objects)).
 
-A `Regex` reaches both JSON Schema documents as `pattern` only when it
+`pattern()` is checked on the server as the `Regex` constraint with
+the `D` modifier (the license's `^\d{4}$` is the `Regex` `/^\d{4}$/D`).
+A pattern reaches both JSON Schema documents as `pattern` only when it
 stays inside the subset PHP and a JavaScript engine read alike: no
-negated class, `\d` `\w` `\s` `\b` only without the `u` modifier, and
-`$` only with the `D` modifier, which a shape's `pattern` is read with
-(the license's `^\d{4}$` is the `Regex` `/^\d{4}$/D`)
+negated class, and `\d` `\w` `\s` `\b` only without the `u` modifier
 ([The served contract](served-contract.md#never-stricter-than-the-runtime)).
-Any other pattern is checked on the server only and named under
-`portable-check`: a `Regex` written
-`/^[^@\s]+@example\.org$/D` is, for its negated class, while
-`/^[a-z0-9._-]+@example\.org$/D` reaches both documents, and so does
-`/^\d{4}$/D`, where `/^\d{4}$/uD` does not.
+A pattern outside it is a `drupal:Regex` check, which the server checks
+and both documents name under `portable-check`:
+`check('drupal:Regex', ['pattern' => '/^[^@\s]+@example\.org$/D'])` is
+one, for its negated class, while `pattern('^[a-z0-9._-]+@example\.org$')`
+reaches both documents.
 
-A key uses it in the type position of `add()`, with a label of its own:
+A key starts its schema from the shape, with a label of its own:
 
 ```php
-$inputs->add('license', License::class, t('Event license'));
+$inputs->add('license', Schema::of(License::class)
+  ->title(t('Event license')));
 ```
 
-- **The key starts from the shape and may only narrow it.** What `add()`
-  returns is a copy of the shape's definition, so the key adds what any
-  key adds with the core setters: `setRequired()`, a `default:`, a
-  constraint, a description of its own. When its owner is built, the
-  key is held to the shape by the check a refiner's answer is held to;
-  a key that widens it (a higher maximum, a second pattern) is refused,
-  naming the key and the shape. Core's `addConstraint()` replaces a
-  constraint of the same name, so a key that tightens a bound the shape
-  already has restates the bounds it keeps:
-  `addConstraint('Length', ['min' => 4, 'max' => 12])` over a shape
-  allowing twelve.
+- **The key starts from the shape and may only narrow it.** The key's
+  schema adds what any key adds: `required()`, a `default()`, a rule, a
+  description of its own. A rule the key states holds beside the
+  shape's, so `minLength(4)` over a shape allowing at most twelve
+  characters allows four to twelve. When its owner is built, the key is
+  held to the shape by the check a refiner's answer is held to; a key
+  that widens it (a higher maximum, a second pattern) is refused,
+  naming the key and the shape.
 - **A shape is a value.** `schema()` states one scalar type, never an
   object or an array, which is a structure, and states no default (not
   even `default(NULL)`) and no `required()` marker, which are each key's.
   Each is refused where a key is first declared with the shape. A shape
   handed to `attach()`, `attachList()` or `mixIn()` is refused.
-- **A port may read one.** `$inputs->reads('code', Sku::class)` reads a
+- **A port may read one.** `$inputs->reads('code', Schema::of(Sku::class))` reads a
   value of the shape's type, and a container may wire it only to a key
   declared with that shape ([Ports](resources.md#ports)).
 - **An alter of the shape tightens it at every key.** An alter naming
@@ -327,18 +393,18 @@ $inputs->add('license', License::class, t('Event license'));
 
 The test module's stock code, `Shape\Sku`, is used at two keys of the
 depot that narrow it differently, read by the shelf tag's port, and
-tightened by `Alter\SkuAlter`. A shape is a named definition, not a
+tightened by `Alter\SkuAlter`. A shape is a named schema, not a
 data type plugin: a module writes no plugin for it
 (why: [decision](decisions.md#a-shape-is-a-named-definition)).
 
 ### Nothing live in the blueprint
 
-A list of allowed values that depends on the site is a constraint whose
-options resolver fetches it, never a list the class assembles. "Live"
-is decided by runtime dependence, not by structure: `PluginExists`,
-whose values are resolved from a plugin manager, is still written down
-as a literal constraint, and so is `EntityBundleExists`, handed the
-entity type by a refiner. A refiner points; the resolver fetches. Look
+A list of allowed values that depends on the site is a named check
+whose options resolver fetches it, never a list the class assembles.
+"Live" is decided by runtime dependence, not by structure:
+`drupal:PluginExists`, whose values are resolved from a plugin manager,
+is still written down as a literal check, and so is
+`drupal:EntityBundleExists`, handed the entity type by a refiner. A refiner points; the resolver fetches. Look
 for a stock constraint or a reference key (`SurfaceValidReference`) first; only when none names the list does a module add one with its
 resolver, as the example does with `SurfaceExamplesBundleField`; see
 [Which constraint to write](options.md#which-constraint-to-write).
@@ -377,8 +443,10 @@ if (\Drupal::moduleHandler()->moduleExists('help')) {
   $inputs->addCacheableDependency($url);
   $description = t('Maximum length of aliases to generate. See <a href=":help">Pathauto help</a> for details.', [':help' => $url->getGeneratedUrl()]);
 }
-$inputs->add('max_length', 'integer', t('Maximum alias length'), default: 100)
-  ->setDescription($description);
+$inputs->add('max_length', Schema::integer()
+  ->title(t('Maximum alias length'))
+  ->description($description)
+  ->default(100));
 ```
 
 ## Declared as properties
@@ -396,10 +464,15 @@ using `DeclaresByProperties`, which supplies `defineInputs()` and
 trait reads the properties in the order they are written and calls the
 same verbs the method would. It is a second spelling of the blueprint,
 never a second contract: what a verb refuses, it refuses, and the
-contract is the one the calls give. Example 18's caterer, shortened:
+contract is the one the calls give. Example 18's caterer:
 
 ```php
 #[Resource('event.catering', storage: CateringStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the catering'),
+  description: new TranslatableMarkup('Sets who caters the event, for how many, the budget, the dietary needs, when food is served and who to contact.'),
+  permission: 'administer site configuration',
+)]
 #[Group('details', 'Details')]
 final class CateringResource implements ResourceInterface {
 
@@ -407,6 +480,12 @@ final class CateringResource implements ResourceInterface {
 
   #[Input('Show the caterer on the event page')]
   public bool $public = FALSE;
+
+  #[Input('Caterer')]
+  #[Schema(maxLength: 128)]
+  #[Examples('Harbour Kitchen')]
+  #[Describe(placeholder: 'The name on the contract')]
+  public string $provider;
 
   #[Input('Headcount', description: 'How many people to cater for.')]
   #[Schema(minimum: 1, maximum: 5000)]
@@ -417,10 +496,31 @@ final class CateringResource implements ResourceInterface {
   #[Describe(group: 'details', suffix: 'EUR')]
   public ?float $budget = NULL;
 
+  #[Input('Dietary needs', list: 'string')]
+  #[Schema(items: [
+    'oneOf' => [
+      ['const' => 'vegetarian', 'title' => new TranslatableMarkup('Vegetarian')],
+      ['const' => 'vegan', 'title' => new TranslatableMarkup('Vegan')],
+      ['const' => 'gluten_free', 'title' => new TranslatableMarkup('Gluten free')],
+      ['const' => 'halal', 'title' => new TranslatableMarkup('Halal')],
+      ['const' => 'kosher', 'title' => new TranslatableMarkup('Kosher')],
+    ],
+  ])]
+  public array $dietary = [];
+
   #[Input('Served at', description: 'HH:MM, on a 24-hour clock.')]
   #[Widget('time')]
+  #[Check('drupal:Regex', [
+    'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
+    'message' => new TranslatableMarkup('Write the time as HH:MM, such as 18:30.'),
+  ])]
   #[Rule(whenEquals: ['public', TRUE], require: TRUE, because: 'Say when food is served while the caterer is shown.')]
   public ?string $served_at = NULL;
+
+  #[Input('Notes for the caterer')]
+  #[Widget('textarea')]
+  #[Describe(group: 'details')]
+  public ?string $notes = NULL;
 
   #[Attach(label: 'Caterer contact', reads: ['listed' => 'public'])]
   public PersonStructure $contact;
@@ -429,8 +529,8 @@ final class CateringResource implements ResourceInterface {
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces); the
-attributes are in `Drupal\surface\Resource\Attribute`, but `#[Schema]` and
-`#[Check]`, which are the Portable Schema package's, in
+module's attributes are in `Drupal\surface\Resource\Attribute`, and
+`#[Schema]` and `#[Check]` are Portable Schema's, in
 `PortableSchema\Builder\Attribute`.
 
 PHP says the key's name (the property's), its type (`string`, `int`,
@@ -439,28 +539,29 @@ whether it must be given. The attributes say the rest:
 
 | With calls | As a property |
 | --- | --- |
-| `add('capacity', 'integer', t('Capacity'))` | `#[Input('Capacity')] public int $capacity;` |
-| `->setRequired(TRUE)` | a type that is not nullable, with no initializer; `required: TRUE` where it also has a default |
-| `default: 0` | the initializer, `public int $weight = 0;` |
+| `add('capacity', Schema::integer()->title(t('Capacity')))` | `#[Input('Capacity')] public int $capacity;` |
+| `->required()` | a type that is not nullable, with no initializer; `required: TRUE` where it also has a default |
+| `->default(0)` | the initializer, `public int $weight = 0;` |
 | no default, not required | `public ?string $address = NULL;` |
-| `'email'`, `'machine_name'`, any type the property cannot say | `#[Input('Email', type: 'email')]` |
-| a shape | the property typed with the shape's class, `public ?PhoneNumber $phone = NULL;` |
-| `->setDescription(t(...))` | `description:` on the attribute |
-| `->addConstraint('Length', ['max' => 64])` | the keyword the constraint is written from, `#[Schema(maxLength: 64)]`; a constraint with no keyword is a check named after its plugin, `#[Check('drupal:Regex', [...])]`, repeatable, in the order written |
-| `->setSetting('widget', 'time')` | `#[Widget('time')]`; any other setting `#[Setting('multiline', TRUE)]` |
-| `DefinitionMetadata::setExamples()` | `#[Examples('Harbour Kitchen')]` |
+| `->format('email')`, `Schema::of('drupal:config/machine_name')`, any type the property cannot say | `#[Input('Email', type: 'email')]` |
+| `Schema::of(PhoneNumber::class)` | the property typed with the shape's class, `public ?PhoneNumber $phone = NULL;` |
+| `->description(t(...))` | `description:` on the attribute |
+| `->maxLength(128)`, `->minimum(1)`, any keyword | `#[Schema(maxLength: 128)]`, Portable Schema's attribute, its arguments the keywords by name |
+| `->check('drupal:Regex', [...])` | `#[Check('drupal:Regex', [...])]`, Portable Schema's, repeatable |
+| `->ui(widget: 'time')` | `#[Widget('time')]` |
+| `->examples(['Harbour Kitchen'])` | `#[Examples('Harbour Kitchen')]` |
 | `describe('key', group:, weight:, placeholder:, prefix:, suffix:, help:)` | `#[Describe(...)]`, `group:` naming a `#[Group]` on the class |
 | `ArrangementGroup::fieldset()`, `::details()` | `#[Group('id', 'Label')]`, `details: TRUE` for a details element |
-| `addList('days', 'string', ...)` | `#[Input('Days', list: 'string')] public array $days = [];`, the item's rules `#[Schema(items: ['maxLength' => 10])]`, a check among them under `portable-check` |
-| `addList()` of maps | `list:` naming a plain class of `#[Input]` properties |
+| `add('days', Schema::list(Schema::string())...)` | `#[Input('Days', list: 'string')] public array $days = [];`, a rule on each item `#[Schema(items: [...])]` |
+| `Schema::list()` of maps | `list:` naming a plain class of `#[Input]` properties |
 | `addMap('coordinates', ..., fn)` | `#[Map('Coordinates')] public Coordinates $coordinates;`, a plain class of `#[Input]` properties |
 | `attach('contact', PersonStructure::class, t('Caterer contact'), reads: [...])` | `#[Attach(label: 'Caterer contact', reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
 | `attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)` | `#[AttachList(VenueRoomStructure::class, label: 'Rooms', max: 20)] public array $rooms;` |
 | `attachVariants('ticket', by: 'pricing', label: t('Ticket'))` | `#[AttachVariants(by: 'pricing', label: 'Ticket')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
-| `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, each entry's rules `#[Schema(additionalProperties: [...])]`; `#[AttachEach(Structure::class, from:, label:)]` on an array property |
-| `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
+| `addEach('on_sale', Schema::bool(), from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, a rule on each entry `#[Schema(additionalProperties: [...])]`; `#[AttachEach(Structure::class, from:, label:)]` on an array property |
+| `reads('listed', Schema::bool())` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
-| `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['maximum' => 5])]` on `$items` |
+| `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(Schema::any()->maximum(5))` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['maximum' => 5])]` on `$items` |
 | `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
 | `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
 
@@ -482,15 +583,15 @@ a composition restates the verb (`Attach`, `AttachList`, `AttachEach`,
   reader names (a label, a description, a placeholder, a prefix, a
   suffix, a help text, a group's title, a rule's reason, a `#[Variant]`'s
   label) are written as bare strings, which it wraps in
-  `TranslatableMarkup`. A text inside a
-  check's options (a message, a choice's label) is handed to core
-  as it is, and is written `new TranslatableMarkup('...')`. The
+  `TranslatableMarkup`. A text inside a `#[Schema]` keyword or a
+  `#[Check]`'s options (a message, a choice's title) is handed on as it
+  is, and is written `new TranslatableMarkup('...')`. The
   trade-off: a bare string is translated where a translation exists, but
   string extraction does not find it; `new TranslatableMarkup('...')` is
   found.
 - **Order.** The properties, in the order written, each one's
   `#[Describe]` right after it, an `#[AttachVariants]` property's key
-  and its `#[Setting]` among them where the property stands; then each
+  among them where the property stands; then each
   `#[MixIn]`, its members after every property; then each `#[Rule]`, in
   the order of the properties carrying them. A class that mixes in
   before its own keys keeps `defineInputs()`.
@@ -535,26 +636,24 @@ once with calls and once as properties, and `PropertyDeclarationTest`
 holds the two to the same documents
 ([decision](decisions.md#a-class-may-declare-its-keys-as-properties)).
 
-## Declared as a Schema
+## What a key's schema may say
 
-A key may be stated as a Portable Schema, the dialect the served
-document is written in, beside the Typed Data spelling. `addSchema()`
-takes the key and a `PortableSchema\Builder\Schema`; the module reads it
-into the same verbs `add()`, `addList()` and `addMap()` are, so the key
-is a definition like any other. Example 1, whole:
+A key's schema is a Portable Schema, the dialect the served document is
+written in. `add()` reads it at the call into the key the data surface
+holds. Example 1, whole:
 
 ```php
 public static function defineInputs(BlueprintInterface $inputs): void {
-  $inputs->addSchema(self::TITLE, Schema::string()
+  $inputs->add(self::TITLE, Schema::string()
     ->title(t('Event title')));
 
-  $inputs->addSchema(self::CAPACITY, Schema::integer()
+  $inputs->add(self::CAPACITY, Schema::integer()
     ->title(t('Capacity'))
     ->minimum(1)
     ->maximum(1000)
     ->default(50));
 
-  $inputs->addSchema(self::OPEN, Schema::bool()
+  $inputs->add(self::OPEN, Schema::bool()
     ->title(t('Registration open'))
     ->default(TRUE));
 }
@@ -562,26 +661,37 @@ public static function defineInputs(BlueprintInterface $inputs): void {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-- **Required.** A key with no `default` and no null is required. The
-  third argument says otherwise: `required: TRUE` requires a key that
-  has a default, `required: FALSE` leaves one optional.
-- **What a key allows** is its keywords, read as the constraints they
-  are written from: `maxLength()` a Length, `minimum()` and `maximum()`
-  a Range, `Schema::options()` a LabeledChoice, `format('email')` the
-  email type. A Drupal constraint the dialect has no keyword for is a
-  check named after its plugin, with the plugin's options:
-  `->check('drupal:ExtensionExists', ['type' => 'module'])`, its message
-  `->message('check.drupal:Regex', '...')` where the constraint has one,
-  as Regex does. A check beside a keyword that says the same constraint
-  holds as well: a Length or a Range is merged with the keyword's, the
-  stricter bound kept, and any other runs beside the keyword.
+- **Required.** A key is required only when its schema says
+  `required()`. A default does not make a key optional or required: a
+  required key with a default starts from the default and must still
+  hold a value when it is saved.
+- **What a key allows** is its keywords, read as the constraints Drupal
+  checks them with: `maxLength()` and `minLength()` a Length,
+  `minimum()` and `maximum()` a Range, `minItems()` and `maxItems()` a
+  Count, `uniqueItems(TRUE)` a UniqueItems, `pattern()` a Regex,
+  `Schema::options()` a list of values with labels, `Schema::enum()` one
+  without, `format('email')` the email type. A Drupal constraint the
+  dialect has no keyword for is a check named after its plugin, with the
+  plugin's options: `->check('drupal:ExtensionExists', ['type' =>
+  'module'])`. A rule with a message of its own is written as the check,
+  with the message among its options:
+  `->check('drupal:Regex', ['pattern' => '/^\d{4}$/D', 'message' => t('Four digits.')])`.
+  A check beside a keyword that says the same constraint holds as well:
+  a Length or a Range is merged with the keyword's, the stricter bound
+  kept, and any other runs beside the keyword.
+- **Form hints** are `ui()`: `ui(widget: 'radios')`, `ui(widget:
+  'textarea')` for a text of several lines, `ui(widget: 'time')`
+  ([Widgets](widgets.md)).
+- **A secret and an example.** `writeOnly(TRUE)` makes the key a secret
+  ([Secrets](#secrets)); `examples([...])` gives the values a caller
+  sees as examples.
 - **Null.** `Schema::anyOf([Schema::integer(), Schema::null()])`, the
   package's spelling of `?int`, is an optional integer; so is the same
   union of an enum, an object or a type of the library.
 - **What is not read is refused.** A part of the schema the module does
-  not read as written is the author's to fix, so `addSchema()` throws,
+  not read as written is the author's to fix, so `add()` throws,
   naming each part by its pointer: an unknown widget, a message for no
-  constraint, a format on a type that is no string. A link is dropped,
+  rule, a format on a type that is no string. A link is dropped,
   and a check the site cannot run is kept for the server to answer as
   unchecked. An object left open is read closed, as a served document
   is, and served with `additionalProperties: false`.
@@ -589,23 +699,31 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   is the email type, and what the library says beyond it (an address of
   254 characters at most) is a Length the document serves as
   `maxLength`.
-- **The document follows the definition.** An optional key with a
+- **The document follows the key.** An optional key with a
   default may be cleared, which puts the default back, so the capacity
-  is served as `["integer", "null"]`, as `add()` declares it.
+  is served as `["integer", "null"]`.
 
-A class declared as properties may spell a key with the package's own
-attributes in place of Surface's: `#[Of]` for a type of the library or a
-shape's class, `#[Schema]` for keywords, `#[Check]` for a check, `#[Ui]`
-for a widget, a weight and the group on the class, `#[Required]` for a
-key with a default that must hold a value. They are a spelling of
-`#[Input]`, so they combine with what `#[Input]` combines with,
-`#[Examples]` and `#[Rule]`, and are refused beside another kind, as
-`#[Input]` is. A property is spelled one way: `#[Input]`, `#[Widget]`,
-`#[Describe]` and `#[Setting]` beside them are refused. `#[Schema]` and
-`#[Check]` alone beside `#[Input]`, `#[Each]` or `#[Computed]` are no
-second spelling: they are that key's rules. A test module's structure, shortened:
+A class declared as properties may also spell a whole key with the
+package's own attributes, with no `#[Input]`: `#[Of]` for a type of the
+library or a shape's class, `#[Schema]` with `title:` and the keywords,
+`#[Check]` for a check, `#[Ui]` for a widget, a weight and the group on
+the class, `#[Required]` for a key with a default that must hold a
+value. They combine with `#[Examples]` and `#[Rule]`. A property is
+spelled one way: one that says its label with `#[Schema(title:)]` takes
+no `#[Input]`, `#[Widget]` or `#[Describe]`. A test module's structure,
+whole, with its `use` lines:
 
 ```php
+use Drupal\surface\Resource\Attribute\Structure;
+use Drupal\surface\Resource\DeclaresByProperties;
+use Drupal\surface\Resource\StructureInterface;
+use Drupal\surface_property_test\Shape\Code;
+use PortableSchema\Builder\Attribute\Check;
+use PortableSchema\Builder\Attribute\Of;
+use PortableSchema\Builder\Attribute\Required;
+use PortableSchema\Builder\Attribute\Schema;
+use PortableSchema\Builder\Attribute\Ui;
+
 #[Structure('property_test.portable.properties')]
 #[Ui(groups: ['about' => ['label' => 'About']])]
 final class PortablePropertiesStructure implements StructureInterface {
@@ -620,9 +738,34 @@ final class PortablePropertiesStructure implements StructureInterface {
   #[Schema(title: 'Email')]
   public ?string $email = NULL;
 
+  #[Schema(
+    title: 'Frequency',
+    oneOf: [
+      ['const' => 'weekly', 'title' => 'Weekly'],
+      ['const' => 'monthly', 'title' => 'Monthly'],
+    ],
+  )]
+  #[Ui(group: 'about')]
+  #[Required]
+  public string $frequency = 'weekly';
+
+  #[Of(Code::class)]
+  #[Schema(title: 'Code')]
+  public ?string $code = NULL;
+
   #[Schema(title: 'Module')]
   #[Check('drupal:ExtensionExists', ['type' => 'module'])]
   public ?string $module = NULL;
+
+  #[Schema(title: 'Note')]
+  #[Ui(widget: 'textarea')]
+  public ?string $note = NULL;
+
+  #[Schema(title: 'Tags', items: ['type' => 'string', 'maxLength' => 10], maxItems: 5)]
+  public array $tags = [];
+
+  #[Schema(title: 'Count', minimum: 1, maximum: 10)]
+  public int $count = 3;
 
 }
 ```
@@ -679,17 +822,51 @@ static methods a structure class has, beside the plugin's own code:
 final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('prefix', 'string', t('Prefix'))
-      ->setDescription(t('Text placed before each value.'))
-      ->addConstraint('Length', ['max' => 10]);
-    // casing, variant
+    $inputs->add('prefix', Schema::string()
+      ->title(t('Prefix'))
+      ->description(t('Text placed before each value.'))
+      ->maxLength(10));
+
+    $inputs->add('casing', Schema::options([
+      'none' => t('As written'),
+      'uppercase' => t('Upper case'),
+      'lowercase' => t('Lower case'),
+    ])
+      ->title(t('Casing'))
+      ->description(t('How the value text is cased.'))
+      ->default('none')
+      ->required());
+
+    $inputs->add('variant', Schema::options(ExampleVariant::choices())
+      ->title(t('Variant'))
+      ->description(t('The variants the chosen casing offers.')));
   }
 
-  // defineOutputs(), variantsOfCasing(): static as well.
+  public static function defineOutputs(BlueprintInterface $outputs): void {
+    $outputs->add('text', Schema::string()
+      ->title(t('Text'))
+      ->description(t('The field value, prefixed and cased as the settings ask.'))
+      ->required());
 
-  public function formatValue(FieldItemInterface $item, array $settings): array {
-    // ...
+    $outputs->add('classes', Schema::list(Schema::string()->title(t('Class')))
+      ->title(t('Classes'))
+      ->description(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
   }
+
+  /**
+   * The variants the chosen casing offers.
+   */
+  #[RefinesInput('variant')]
+  public static function variantsOfCasing(string $casing): Schema {
+    $offered = ExampleVariant::choicesFor($casing);
+    if ($offered === []) {
+      return Schema::any();
+    }
+    return Schema::options($offered)
+      ->description(t('A @casing display variant.', ['@casing' => $casing]));
+  }
+
+  // formatValue() is left out: it is not part of the surface.
 
 }
 ```
@@ -801,7 +978,7 @@ in identity order; any other is in the query string
 
 A derived resource's operation names its parameters, `['id']`: each
 the name of a key the resource declares, which takes that key's
-definition and no type of its own. The operation receives the key's
+schema and no type of its own. The operation receives the key's
 value; the storage loads what it names
 ([Derived resources](resources.md#derived-resources),
 [decision](decisions.md#a-parameter-names-a-key)).
@@ -858,17 +1035,23 @@ A key is a string wherever it is named, `add('venue', ...)`,
 `narrow('room')`, `Condition::equals('venue', ...)`, and an editor can
 neither rename a string nor find its uses. So the class names each key
 once, as a constant, in declaration order, one line each in one block
-with no docblock (the label on the `add()` line says what the key is),
+with no docblock (the title on the `add()` line says what the key is),
 and every later mention is the constant:
 
 ```php
 public const VENUE = 'venue';
 public const ROOM = 'room';
 public const CAPACITY = 'capacity';
+```
 
-// ...
-$inputs->add(self::ROOM, 'string', t('Room'));
+and later, in `defineInputs()` and on a refiner:
+
+```php
+$inputs->add(self::ROOM, Schema::string()->title(t('Room')));
 $inputs->narrow(self::CAPACITY)->when(Condition::present(self::ROOM))->require();
+```
+
+```php
 #[RefinesInput(self::CAPACITY)]
 ```
 
@@ -924,9 +1107,10 @@ method is static and calls `t()`.
 
 ## Maps and lists
 
-A map is `addMap()`, a list `addList()`; `addDefinition()` takes one
-value and refuses either. Keys built by hand go into the map's callable
-one by one, each with `addDefinition()`:
+A map is `addMap()`, a list `add()` with `Schema::list()`;
+`addDefinition()` takes one Typed Data definition of one value and
+refuses either. Definitions a host reader holds go into the map's
+callable one by one, each with `addDefinition()`:
 
 ```php
 $inputs->addMap('field_overrides', t('Field overrides'), static function (BlueprintInterface $overrides): void {
@@ -952,10 +1136,16 @@ desk says where it stands:
 
 ```php
 $inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
-  $location->add('lat', 'float', t('Latitude'), default: 43.6532)
-    ->addConstraint('Range', ['min' => -90, 'max' => 90]);
-  $location->add('lng', 'float', t('Longitude'), default: -79.3832)
-    ->addConstraint('Range', ['min' => -180, 'max' => 180]);
+  $location->add('lat', Schema::number()
+    ->title(t('Latitude'))
+    ->default(43.6532)
+    ->minimum(-90)
+    ->maximum(90));
+  $location->add('lng', Schema::number()
+    ->title(t('Longitude'))
+    ->default(-79.3832)
+    ->minimum(-180)
+    ->maximum(180));
 });
 ```
 
@@ -966,7 +1156,7 @@ no def; the form draws it as a fieldset, the tool takes it as a map in
 `values`, and storage holds it under its key. What its keys start from
 is the map's default.
 
-Every blueprint method works inside the callable: `add()`, `addList()`,
+Every blueprint method works inside the callable: `add()`,
 `addDefinition()`, a nested `addMap()`, `describe()`, and `attach()`,
 `attachList()`, `attachVariants()`, `mixIn()`, `narrow()` and
 `resolve()`. A map whose keys need a frame of their own (a child, a
@@ -986,49 +1176,45 @@ alter's map, and an output, hold plain keys alone: an alter attaches a
 structure at its own mount, and outputs hold no attached structures
 ([decision](decisions.md#an-anonymous-map)).
 
-A list of values is `addList()`, as a single value is `add()`: a key,
-an item, a label and a default, the item a type name, a shape's class or
-a definition of its own. It returns the list, described fluently
-afterwards with the core setters:
+A list of values is `add()` with `Schema::list()`, whose argument is
+the item's schema: a starting point, a shape or a schema kept in a
+variable. The list's own title, default and rules follow it:
 
 ```php
-$inputs->addList('keywords', 'string', t('Keywords'), default: []);
-$inputs->addList('days', $day, t('Days open'))
-  ->setRequired(TRUE);
+$inputs->add('keywords', Schema::list(Schema::string())
+  ->title(t('Keywords'))
+  ->default([]));
+
+$day = Schema::options([
+  'mon' => t('Monday'),
+  'tue' => t('Tuesday'),
+])->type('string');
+$inputs->add('days', Schema::list($day)
+  ->title(t('Days open'))
+  ->required());
 ```
 
-The blueprint builds the list, so a resource or structure class never
-writes core's constructor, and never calls `ListDataDefinition::create()`,
-which asks the typed data manager for the item. A list of structures is
-a collection, `attachList()`
+A `Schema` never changes once made, so two lists may share one item
+variable. A list of structures is a collection, `attachList()`
 ([Collections](resources.md#collections)).
 
 ## Defaults and examples
 
-Core's data definitions carry neither a default value nor examples yet.
-Both are written onto the definition here, under the definition array
-keys the core draft proposes, through `DefinitionMetadata`:
-
-| What | Definition array key | Written with |
-| --- | --- | --- |
-| Default value | `default_value` | the `default:` argument of `add()`, `addList()` and `addDefinition()`, or `DefinitionMetadata::setDefaultValue()` |
-| Examples | `examples` | `DefinitionMetadata::setExamples()` |
-
-Each accessor delegates to the definition's own core method when one
-exists, so the class becomes a pass-through the day core lands its
-version. Read them back with `hasDefaultValue()`, `getDefaultValue()`,
-`defaultOf()` (which assembles a complex definition's default from its
-property definitions) and `getExamples()`.
-
-Passed to `add()`, `addList()` or `addDefinition()`, `NULL` declares no default,
-which is what core definitions already say. Written with
-`DefinitionMetadata::setDefaultValue()`, `NULL` is a declared default
-and is distinct from declaring none. What consumers do with a declared
-one: the data surface's `getDefault()` and
-`getDefaultValues()` read it, and `accept()` merges it under the stored
-values; an example is stated by both documents and drawn as no
-placeholder, which is the key's declared
+A key's default is `default()` on its schema, and its examples are
+`examples([...])`. A key with no `default()` declares no default;
+`default(NULL)` declares `NULL` as its default, which is distinct from
+declaring none. What consumers do with a declared one: the data
+surface's `getDefault()` and `getDefaultValues()` read it, and
+`accept()` merges it under the stored values; an example is stated by
+both documents and drawn as no placeholder, which is the key's declared
 [arrangement](forms.md#arranging-the-keys).
+
+A Typed Data definition handed to `addDefinition()` carries both under
+the definition array keys the core draft proposes, `default_value` and
+`examples`, written with `DefinitionMetadata::setDefaultValue()` and
+`setExamples()`. Each delegates to the definition's own core method when
+one exists, so the class becomes a pass-through the day core lands its
+version.
 
 Two consequences worth knowing before you declare one. A map's declared
 default merges *over* the defaults its properties declare rather than
@@ -1108,9 +1294,9 @@ A locked key stays advertised. It renders disabled in a generated form,
 and submitted input for it is ignored: not an error, just not a way to
 move the value. `SurfaceInterface::isLocked()` answers it.
 
-Locking is context rather than an intrinsic property of a definition,
+Locking is context rather than an intrinsic property of a key's schema,
 which is why it lives on the data surface rather than on the
-definition: the same machine name key is locked in the update operation
+schema: the same machine name key is locked in the update operation
 and open in the create operation, and one class declares both.
 
 ## Secrets
@@ -1119,9 +1305,11 @@ A key whose stored value must never be read back to whoever writes it
 (an API token, a password, a signing key) is declared secret:
 
 ```php
-$token = $inputs->add('token', 'string', t('API key'), default: '')
-  ->setDescription(t('The key this field authenticates with.'));
-DefinitionMetadata::setSecret($token);
+$inputs->add('token', Schema::string()
+  ->title(t('API key'))
+  ->description(t('The key this field authenticates with.'))
+  ->default('')
+  ->writeOnly(TRUE));
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -1129,9 +1317,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 That is the test module's `SecretFieldSettingsStructure`, a structure
 the secret field type names.
 
-It is one flag on the definition, written the same way as defaults and
-examples, and it is read in four places so that declaring it is all an
-author does:
+It is one keyword on the key's schema, `writeOnly(TRUE)`, the keyword
+JSON Schema has for a value that is sent and never read back, and it is
+read in four places so that declaring it is all an author does:
 
 | Where | What the flag does |
 | --- | --- |
@@ -1170,7 +1358,7 @@ It is worth being plain about the edges:
 - **It is not access control.** A caller who may configure the
   structure may set the secret. Who may configure it is the operation's
   permission and the access class.
-- **It does not hide the key.** The key, its label and its constraints
+- **It does not hide the key.** The key, its label and its rules
   stay advertised, which is the point: a caller has to know the secret
   exists to send one.
 - **It is not retroactive.** Values written before the key was declared
@@ -1179,21 +1367,28 @@ It is worth being plain about the edges:
 ## Computed keys
 
 A key whose value follows other keys, and that nobody types, is declared
-with `compute()`: typed and labeled as `add()` declares a key, and
-computed by a class from the keys `from:` names. Example 15's venue
-computes its slug from its name:
+with `compute()`: a name and a schema as `add()` takes them, and a
+class that computes the value from the keys `from:` names. Example 15's
+venue computes its slug from its name:
 
 ```php
-$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
-  ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
+$inputs->compute('slug', Schema::string()
+  ->title(t('Slug'))
+  ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+  ->check('drupal:Regex', [
+    'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+    'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+  ])
+  ->maxLength(128),
+  from: ['label'], using: Slugify::class);
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The class implements `ComputesValueInterface`, whose one method is static,
-`compute(array $from, ?DataDefinitionInterface $key = NULL): mixed`:
+`compute(array $from, ?Schema $key = NULL): mixed`:
 handed the value of each key `from:` names, and the key's own
-definition, it answers the value. It is a pure function of those
+schema, it answers the value. It is a pure function of those
 values and of what the key declares, held to it as a static refiner is:
 with assertions on it runs with the container guarded
 (`PipelineGuard::guardCompute()`), and the module's PHPStan rule flags a
@@ -1211,7 +1406,7 @@ below, which may ask for core's `transliteration` service.
   computes it as `ON_CREATE` does only when a call leaves it out, or
   sends it null or empty, and keeps a value sent: the machine name below.
 - **Judged like any key.** The pipeline computes it once the other keys
-  are accepted, then validates it by its own constraints and rules, and
+  are accepted, then validates it by its own rules, and
   storage writes it. A refusal of it names the keys it is computed from,
   the ones a caller can change: "The slug riverside-hall is held
   already, by riverside: a slug is held once across the venues. This is
@@ -1237,17 +1432,20 @@ sent, of core's config schema type `machine_name`, by the stock
 `MachineName`:
 
 ```php
-$inputs->add('label', 'string', t('Name'))->setRequired(TRUE);
-$inputs->compute('id', 'machine_name', t('Machine name'),
+$inputs->add('label', Schema::string()
+  ->title(t('Name'))
+  ->required());
+$inputs->compute('id', Schema::of('drupal:config/machine_name')
+  ->title(t('Machine name')),
   from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-- **The type.** A type typed data does not know is read from the config
-  schema: `machine_name` is a string with the pattern `^[a-z0-9_]+$`
-  and a Length of 166, both the key's own and stated in both documents.
-  The key may narrow them, `->addConstraint('Length', ['max' => 32])`,
+- **The type.** `Schema::of('drupal:config/machine_name')` names core's config
+  schema type, which the module reads: `machine_name` is a string with
+  the pattern `^[a-z0-9_]+$` and a Length of 166, both the key's own and
+  stated in both documents. The key may narrow them, `->maxLength(32)`,
   never widen them, and the generated config schema writes `type:
   machine_name` with what it narrows.
 - **Left out, computed; sent, kept.** `MachineName` transliterates the
@@ -1255,7 +1453,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `[a-z0-9_]` with one underscore, cuts it to the key's Length and trims
   the underscores at its ends, as core's machine name element does in
   the browser: "Café Déjà Vu" is `cafe_deja_vu`. A value sent is judged
-  by the key's constraints and kept. Both documents state the key with
+  by the key's rules and kept. Both documents state the key with
   `x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and
   no `readOnly`; it is never in `required`, and the write tool offers it.
 - **Held once.** Where the key is the identity a create names and the
@@ -1274,26 +1472,24 @@ Example 15's venue and the content type example declare it
 
 ## Required
 
-`required` on a core `DataDefinition` is falsy unless you set it:
-definitions are **optional by default**.
+A key is required only when its schema says `required()`. With no mark
+it is optional, whether or not it has a default.
 
 > **Requiredness appears only when it says something.** Write
-> `setRequired(TRUE)` on the keys that must be configured, and write
-> nothing at all on the keys that need not be. A `setRequired(FALSE)`
-> repeats the default in every declaration, so it reads as a decision
-> where there is none, and a reader scanning for the required keys has to
-> read the falsy ones to rule them out.
+> `required()` on the keys that must be configured, and write nothing on
+> the keys that need not be. No call takes a mark off a schema, so
+> there is no call that repeats the default.
 
-This module's resources and structures follow that rule throughout, so
-a `setRequired()` anywhere in one is a `TRUE`. The one place the
-opposite is written down is a definition that did not start optional: the
-Tool API's `InputDefinition` defaults to *required*, so
-the tool door turns the flag off explicitly when it derives one
-from config schema, and there the call is saying something.
+The verbs that attach take the same answer as a named argument where a
+structure's key may be required: `attachList(..., required: TRUE)`. The
+one place the opposite is written down is a definition that did not
+start optional: the Tool API's `InputDefinition` defaults to
+*required*, so the tool door turns the flag off explicitly when it
+derives one from config schema, and there the call is saying something.
 
 What "required" means here is that the key must be *configured*, which is
 a narrower claim than "non-empty": `FALSE`, `0` and `[]` all satisfy a
-required key and are then held to its own constraints. Only `NULL` and
+required key and are then held to its own rules. Only `NULL` and
 the empty string do not. The violation is always the data surface's
 own message, never a type-specific one from a constraint, so an empty
 required number and an empty required string read alike to the person

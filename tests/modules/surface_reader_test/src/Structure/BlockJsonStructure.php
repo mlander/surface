@@ -20,7 +20,7 @@ final class BlockJsonStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('plugin', Schema::enum(['page_title_block', 'system_branding_block', 'system_menu_block:main'])
+    $inputs->add('plugin', Schema::enum(['page_title_block', 'system_branding_block', 'system_menu_block:main'])
       ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginJsonStructures::class);

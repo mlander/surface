@@ -20,7 +20,7 @@ final class WiredOwnershipStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('circle', Schema::string()
+    $inputs->add('circle', Schema::string()
       ->title('Circle'));
     $inputs->attach('owned', OwnershipStructure::class, reads: ['audience' => 'circle']);
   }

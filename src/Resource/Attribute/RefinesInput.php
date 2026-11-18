@@ -7,13 +7,16 @@ namespace Drupal\surface\Resource\Attribute;
 /**
  * On a method: it tightens one input key against sibling values.
  *
- * The first parameter is the key's definition (a clone). Every
- * parameter after it is a sibling input, in order, typed as that key's
+ * Each parameter is a sibling input, in order, typed as that key's
  * value, and named for the key it is handed:
  *
  *   #[RefinesInput('bundle')]
- *   public static function bundleOf(
- *     DataDefinitionInterface $bundle, string $entity_type)
+ *   public static function bundleOf(string $entity_type): Schema
+ *
+ * A first parameter typed Schema, which is optional, is handed the key's
+ * own schema as it stands, for a method that reads what the key allows:
+ * its standard keywords through get(), its list of values through
+ * \Drupal\surface\Refinement\ChoiceSet::of().
  *
  * Sealing refuses a parameter that names no declared input key, so a
  * renamed parameter is an error rather than a refiner that silently
@@ -29,13 +32,14 @@ namespace Drupal\surface\Resource\Attribute;
  * coerces a scalar argument outside strict mode, so a form's raw "1" reaches a
  * bool parameter as TRUE.
  *
- * It returns the definition, tightened with plain core API; the
- * framework checks the result is narrower. Or it answers that the key
- * does not apply to these values, the narrowest answer, with
+ * It returns a Schema of what the watched values add to the key,
+ * Schema::any() for nothing; the module applies it, and of its rule and
+ * the key's the stricter stands, so an answer cannot widen. Or it answers
+ * that the key does not apply to these values, the narrowest answer, with
  * DoesNotApply::here(), which its return type then names:
  *   public static function sendDayOnlyWhenWeekly(
- *     DataDefinitionInterface $send_day, string $frequency,
- *   ): DataDefinitionInterface|DoesNotApply
+ *     string $frequency,
+ *   ): Schema|DoesNotApply
  * See docs/decisions.md#a-key-that-does-not-apply. Found on the
  * resource's or structure's own class and on any class carrying
  * #[Alters] for it.
@@ -54,8 +58,7 @@ namespace Drupal\surface\Resource\Attribute;
  *     so a form refines again when one changes; one that watches nothing
  *     runs on every refinement, validation and submission:
  *       #[RefinesInput('room', runtime: TRUE)]
- *       public function openRooms(
- *         DataDefinitionInterface $room, string $venue)
+ *       public function openRooms(Schema $room, string $venue): Schema
  *
  * The kind is enforced, not trusted. A static refiner is a static
  * method: the build refuses an instance method that does not declare

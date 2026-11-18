@@ -60,7 +60,7 @@ final class PerformanceResource implements ResourceInterface {
     }
     $bandwidth = ArrangementGroup::details('bandwidth_optimization', t('Bandwidth optimization'), description: t('External resources can be optimized automatically, which can reduce both the size and number of requests made to your website.'));
 
-    $inputs->addSchema(self::MAX_AGE, Schema::integer()
+    $inputs->add(self::MAX_AGE, Schema::integer()
       ->title(t('Browser and proxy cache maximum age'))
       ->description(t('This is used as the value for max-age in Cache-Control headers.'))
       ->default(0)
@@ -68,13 +68,13 @@ final class PerformanceResource implements ResourceInterface {
       ->required());
     $inputs->describe(self::MAX_AGE, group: ArrangementGroup::details('caching', t('Caching')));
 
-    $inputs->addSchema(self::CSS_PREPROCESS, Schema::bool()
+    $inputs->add(self::CSS_PREPROCESS, Schema::bool()
       ->title(t('Aggregate CSS files'))
       ->default(TRUE)
       ->required());
     $inputs->describe(self::CSS_PREPROCESS, group: $bandwidth);
 
-    $inputs->addSchema(self::JS_PREPROCESS, Schema::bool()
+    $inputs->add(self::JS_PREPROCESS, Schema::bool()
       ->title(t('Aggregate JavaScript files'))
       ->default(TRUE)
       ->required());

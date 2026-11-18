@@ -24,7 +24,7 @@ final class ForeignMountWatcherAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title('Note'));
   }
 

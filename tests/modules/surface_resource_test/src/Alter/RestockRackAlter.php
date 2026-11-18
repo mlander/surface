@@ -23,7 +23,7 @@ final class RestockRackAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('supplier', Schema::string()
+    $inputs->add('supplier', Schema::string()
       ->title('Supplier'));
   }
 

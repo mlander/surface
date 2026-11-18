@@ -25,21 +25,21 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('offset', Schema::integer()
+    $inputs->add('offset', Schema::integer()
       ->title(t('Offset'))
       ->description(t('How many venues to skip, in order of weight.'))
       ->default(0)
       ->minimum(0)
       ->maximum(10000));
 
-    $inputs->addSchema('limit', Schema::integer()
+    $inputs->add('limit', Schema::integer()
       ->title(t('Limit'))
       ->description(t('How many venues to answer at most.'))
       ->default(20)
       ->minimum(1)
       ->maximum(50));
 
-    $inputs->addSchema('status', Schema::bool()
+    $inputs->add('status', Schema::bool()
       ->title(t('Enabled'))
       ->description(t('Only the venues enabled, or only those disabled; left out, every venue.')));
   }
@@ -48,7 +48,7 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('items', Schema::list(Schema::object([
+    $outputs->add('items', Schema::list(Schema::object([
       'id' => Schema::string()->title(t('Machine name'))->required(),
       'label' => Schema::string()->title(t('Name'))->required(),
       'capacity' => Schema::integer()->title(t('Capacity'))->required(),
@@ -58,7 +58,7 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
       ->description(t('The page of venues, lighter first, each one the account may read.'))
       ->required());
 
-    $outputs->addSchema('total', Schema::integer()
+    $outputs->add('total', Schema::integer()
       ->title(t('Total'))
       ->description(t('How many venues the filter matched that the account may read, on every page.'))
       ->required());

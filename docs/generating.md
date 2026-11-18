@@ -149,8 +149,10 @@ public const USE_ADMIN_THEME = 'use_admin_theme';
  * {@inheritdoc}
  */
 public static function defineInputs(BlueprintInterface $inputs): void {
-  $inputs->add(self::USE_ADMIN_THEME, 'boolean', t('Use administration theme when editing or creating content'), default: TRUE)
-    ->setRequired(TRUE);
+  $inputs->add(self::USE_ADMIN_THEME, Schema::bool()
+    ->title(t('Use administration theme when editing or creating content'))
+    ->default(TRUE)
+    ->required());
 }
 ```
 
@@ -163,35 +165,36 @@ file; a single-directory component's `.component.yml` gives its props.
 Draft-04, -06 and -07 are converted first
 ([Older drafts](reading-a-schema.md#older-drafts)). Each property is read
 as [the mapping](reading-a-schema.md#the-mapping) says, and written as
-the call that declares it: a value `add()`, a list of values `addList()`,
-a nested object a map `addMap()`, an object under `$defs` that a
+the call that declares it: a value `add()`, a list of values `add()`
+with `Schema::list()`, a nested object a map `addMap()`, an object under `$defs` that a
 `$ref` names a class of its own in `src/Structure/` that the resource
 `attach()`es, an array of objects `attachList()`, a conditional of the
 vocabulary `narrow()->when()`. The config object is a new one of the
 module's, so its schema entry and install file are written.
 
-A `oneOf` of titled constants is a `LabeledChoice` written as its
-`labels` alone, each value a key ([Three ways to write it](options.md#three-ways-to-write-it)). Where a value is a numeric
-string, PHP would key it as an integer (`'1'` as `1`), so the values stay
-in `choices` with the `labels` beside them:
+A `oneOf` of titled constants is written as `Schema::options()`, each
+value a key ([How to write one](options.md#how-to-write-one)). Where a
+value is a numeric string, PHP would key it as an integer (`'1'` as
+`1`), so the generator writes the `drupal:LabeledChoice` check with the
+values in `choices` and the `labels` beside them:
 
 ```php
-$inputs->add(self::LEVEL, 'integer', t('Level'))
-  ->addConstraint('LabeledChoice', [
-    'labels' => [
-      1 => t('Open'),
-      2 => t('Invited'),
-    ],
-  ]);
+$inputs->add(self::LEVEL, Schema::options([
+  1 => t('Open'),
+  2 => t('Invited'),
+])
+  ->type('integer')
+  ->title(t('Level')));
 
-$inputs->add(self::SIZE, 'string', t('Size'))
-  ->addConstraint('LabeledChoice', [
+$inputs->add(self::SIZE, Schema::string()
+  ->title(t('Size'))
+  ->check('drupal:LabeledChoice', [
     'choices' => ['1', '2'],
     'labels' => [
       1 => t('Small'),
       2 => t('Large'),
     ],
-  ]);
+  ]));
 ```
 
 ## What it cannot write
@@ -205,8 +208,9 @@ keyword and the key, so the author sees what to write by hand:
 // From the schema, not written here: multipleOf on self::SEATS, which no
 // constraint here states; the reader keeps it as a JsonSchema constraint.
 // Write a constraint for it.
-$inputs->add(self::SEATS, 'integer', t('Seats'))
-  ->addConstraint('Range', ['min' => 1]);
+$inputs->add(self::SEATS, Schema::integer()
+  ->title(t('Seats'))
+  ->minimum(1));
 ```
 
 The same holds for what a config schema states that its document does

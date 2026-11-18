@@ -38,14 +38,14 @@ final class ShelterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->required());
-    $inputs->addSchema('kind', Schema::string()
+    $inputs->add('kind', Schema::string()
       ->title(t('Kind'))
       ->required());
     $inputs->attachVariants('shelter', by: 'kind', label: t('Shelter'));
-    $inputs->addSchema('notes', Schema::string()
+    $inputs->add('notes', Schema::string()
       ->title(t('Notes')));
   }
 

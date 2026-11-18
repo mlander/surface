@@ -31,12 +31,12 @@ final class WebhookResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('endpoint', Schema::string()->format('uri')
+    $inputs->add('endpoint', Schema::string()->format('uri')
       ->title(t('Endpoint'))
       ->default('https://hooks.example.com/sales')
       ->required());
 
-    $inputs->addSchema('api_key', Schema::string()
+    $inputs->add('api_key', Schema::string()
       ->title(t('API key'))
       ->description(t('The key each post is signed with, pasted here.'))
       ->writeOnly(TRUE));

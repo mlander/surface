@@ -22,7 +22,7 @@ final class ConditionDirectStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::enum(['request_path', 'response_status', 'user_role'])
+    $inputs->add('id', Schema::enum(['request_path', 'response_status', 'user_role'])
       ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [

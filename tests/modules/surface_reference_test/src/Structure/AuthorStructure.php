@@ -19,7 +19,7 @@ final class AuthorStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('author', Schema::integer()
+    $inputs->add('author', Schema::integer()
       ->title('Author')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
   }

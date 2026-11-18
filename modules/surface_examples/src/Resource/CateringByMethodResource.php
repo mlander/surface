@@ -35,30 +35,30 @@ final class CateringByMethodResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $details = ArrangementGroup::fieldset('details', t('Details'));
 
-    $inputs->addSchema('public', Schema::bool()
+    $inputs->add('public', Schema::bool()
       ->title(t('Show the caterer on the event page'))
       ->default(FALSE));
 
-    $inputs->addSchema('provider', Schema::string()
+    $inputs->add('provider', Schema::string()
       ->title(t('Caterer'))
       ->maxLength(128)
       ->examples(['Harbour Kitchen'])
       ->required());
     $inputs->describe('provider', placeholder: t('The name on the contract'));
 
-    $inputs->addSchema('headcount', Schema::integer()
+    $inputs->add('headcount', Schema::integer()
       ->title(t('Headcount'))
       ->description(t('How many people to cater for.'))
       ->minimum(1)
       ->maximum(5000)
       ->required());
 
-    $inputs->addSchema('budget', Schema::number()
+    $inputs->add('budget', Schema::number()
       ->title(t('Budget'))
       ->minimum(0));
     $inputs->describe('budget', group: $details, suffix: t('EUR'));
 
-    $inputs->addSchema('dietary', Schema::list(Schema::options([
+    $inputs->add('dietary', Schema::list(Schema::options([
       'vegetarian' => t('Vegetarian'),
       'vegan' => t('Vegan'),
       'gluten_free' => t('Gluten free'),
@@ -68,7 +68,7 @@ final class CateringByMethodResource implements ResourceInterface {
       ->title(t('Dietary needs'))
       ->default([]));
 
-    $inputs->addSchema('served_at', Schema::string()
+    $inputs->add('served_at', Schema::string()
       ->title(t('Served at'))
       ->description(t('HH:MM, on a 24-hour clock.'))
       ->check('drupal:Regex', [
@@ -77,7 +77,7 @@ final class CateringByMethodResource implements ResourceInterface {
       ])
       ->ui(widget: 'time'));
 
-    $inputs->addSchema('notes', Schema::string()
+    $inputs->add('notes', Schema::string()
       ->title(t('Notes for the caterer'))
       ->ui(widget: 'textarea'));
     $inputs->describe('notes', group: $details);

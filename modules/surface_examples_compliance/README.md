@@ -15,7 +15,7 @@ number of stewards, one per fifty people. The served contract writes the
 license once, as the def `event.license`, and the structure's key refers
 to it. The structure is meant for any resource, so it names none: the capacity it
 counts stewards for it reads through a port, under its own name,
-`$inputs->reads('capacity', 'integer', required: TRUE)`, and its static
+`$inputs->reads('capacity', Schema::integer()->required())`, and its static
 `#[RefinesInput('stewards')]` method watches the port. It translates
 with `t()` and holds no service, so the served contract runs it ahead of
 time where it can.
@@ -49,7 +49,7 @@ license at its mount:
 ```php
 $inputs->narrow('capacity')
   ->when(Condition::absent('license'))
-  ->constrain('Range', ['max' => 100])
+  ->constrain(Schema::keywords(['maximum' => 100]))
   ->because($this->t('Up to 100 without an event license.'));
 ```
 

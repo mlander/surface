@@ -23,7 +23,7 @@ final class RouteReadingAccessResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note'))
       ->default('Open'));
   }

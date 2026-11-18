@@ -24,11 +24,11 @@ final class RelayLinkStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('token', Schema::string()
+    $inputs->add('token', Schema::string()
       ->title(t('Token'))
       ->writeOnly(TRUE));
 
-    $inputs->addSchema('vault_id', Schema::string()
+    $inputs->add('vault_id', Schema::string()
       ->title(t('Vault entry')));
 
     $inputs->resolve('token', from: ['vault_id'], using: VaultToken::class);

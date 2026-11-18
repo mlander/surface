@@ -147,7 +147,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   }
 
   /**
-   * {@inheritdoc}
+   * Declares a key of the old spelling: a type, a label, a default.
    *
    * The type is a row of the type table (LeafTypes). It may be a shape's
    * class: the key then starts from the shape as its alters left it, and
@@ -160,7 +160,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Decision: see
    * docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader.
    */
-  public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
+  protected function addTyped(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
     $verb = sprintf('add("%s", "%s")', $key, $type);
     if (str_contains($type, '\\')) {
       $definition = $this->fromShape($key, $type);
@@ -404,9 +404,35 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Read by the schema reader, which declares the key through this
    * blueprint's own verbs: what they refuse is refused the same way.
    */
-  public function addSchema(string $key, Schema $schema): static {
+  public function add(string $key, Schema|string $schema, string|\Stringable|null $label = NULL, mixed $default = NULL): DataDefinition|static {
+    if (is_string($schema)) {
+      if ($label === NULL) {
+        throw new \InvalidArgumentException(sprintf('add("%s", "%s") is handed no label. A key is stated as a schema: add("%s", Schema::string()->title(...)).', $key, $schema, $key));
+      }
+      return $this->addTyped($key, $schema, $label, $default);
+    }
+    static::assertSchemaOnly($key, $label, $default);
     SchemaReader::authored($this, $key, $schema);
     return $this;
+  }
+
+  /**
+   * Refuses a label or a default handed to add() beside a schema.
+   *
+   * @param string $key
+   *   The key.
+   * @param string|\Stringable|null $label
+   *   The label handed, or NULL.
+   * @param mixed $default
+   *   The default handed, or NULL.
+   *
+   * @throws \InvalidArgumentException
+   *   When either was handed: the schema says both.
+   */
+  public static function assertSchemaOnly(string $key, string|\Stringable|null $label, mixed $default): void {
+    if ($label !== NULL || $default !== NULL) {
+      throw new \InvalidArgumentException(sprintf('add("%s") is handed a schema and a %s beside it. The schema says both: title() and default().', $key, $label !== NULL ? 'label' : 'default'));
+    }
   }
 
   /**
@@ -446,6 +472,59 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $this->keys[] = $key;
     $this->definitions[$key] = $definition;
     return $definition;
+  }
+
+  /**
+   * Holds each own constraint given an empty array of options as given none.
+   *
+   * Run once the author is done with the definitions the verbs returned
+   * (after the owner's declaration and after each alter's), so a
+   * constraint added with `[]` (`addConstraint('Country', [])`) is held
+   * as one added with no options, NULL, as the reader holds
+   * `check('drupal:Country', [])`, which the builder writes as it writes
+   * `check('drupal:Country')`. Core's constraint manager makes the same
+   * constraint of both. A key declared as its schema is the reader's
+   * already and is not read here; a property of a map and a list's item
+   * are, at any depth.
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   */
+  public function settleOptions(): void {
+    foreach ($this->definitions as $definition) {
+      if ($definition !== NULL) {
+        static::settleDefinition($definition, []);
+      }
+    }
+  }
+
+  /**
+   * Holds a definition's own constraints given `[]` as given none, below too.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   * @param array<int, true> $seen
+   *   The definitions above it, by object id.
+   */
+  protected static function settleDefinition(DataDefinitionInterface $definition, array $seen): void {
+    $id = spl_object_id($definition);
+    if (isset($seen[$id])) {
+      return;
+    }
+    $seen[$id] = TRUE;
+    if ($definition instanceof DataDefinition) {
+      $own = $definition->toArray()['constraints'] ?? [];
+      if (is_array($own) && in_array([], $own, TRUE)) {
+        $definition->setConstraints(array_map(static fn (mixed $options): mixed => $options === [] ? NULL : $options, $own));
+      }
+    }
+    if ($definition instanceof ListDataDefinitionInterface) {
+      static::settleDefinition($definition->getItemDefinition(), $seen);
+    }
+    elseif ($definition instanceof ComplexDataDefinitionInterface) {
+      foreach ($definition->getPropertyDefinitions() as $property) {
+        static::settleDefinition($property, $seen);
+      }
+    }
   }
 
   /**

@@ -14,9 +14,9 @@ shows how one module tightens another's).
 Your module keeps two colors, one for links and one for the background,
 in a second config object, `my_module.colors`. Both are written the
 same way: `#` and six hexadecimal digits. The shape says so once. It is
-a class in your module's `src/Shape/` directory, with the Portable Schema
-package's `#[Document]` and its id, and its static `schema()` returns the value's schema, built with
-Portable Schema's `Schema`:
+a class in your module's `src/Shape/` directory. Portable Schema's
+`#[Document]` attribute gives it its id, and its static `schema()`
+returns the value's schema, built with Portable Schema's `Schema`:
 
 ```php
 #[Document('my_module.hex_color')]
@@ -39,13 +39,14 @@ it, and the message for `pattern` is what a caller reads when a value
 does not match. `examples()` gives an example of a good value. A
 shape has no default and is never required: each place that uses it
 decides those. Nor does it have a permission or an access answer of
-its own, since `#[Shape]` takes only an id; the value takes the
+its own, since `#[Document]` gives it only an id; the value takes the
 [access](15-access.md) of whatever holds it.
 
 ## Using it twice
 
-The colors' class names the shape where a type would go, once for each
-value, and gives each its own label and default. This is
+The colors' class starts each value's schema from the shape,
+`Schema::of(HexColor::class)`, once for each value, and gives each its
+own label and default. This is
 `MyColorsResource` in full; its two attributes work as the settings'
 do on [Resources](02-resources.md):
 
@@ -62,19 +63,23 @@ do on [Resources](02-resources.md):
 final class MyColorsResource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('link_color', HexColor::class, t('Link color'), default: '#0969DA')
-      ->setRequired(TRUE);
+    $inputs->add('link_color', Schema::of(HexColor::class)
+      ->title(t('Link color'))
+      ->default('#0969DA')
+      ->required());
 
-    $inputs->add('background_color', HexColor::class, t('Background color'), default: '#FFFFFF')
-      ->setRequired(TRUE);
+    $inputs->add('background_color', Schema::of(HexColor::class)
+      ->title(t('Background color'))
+      ->default('#FFFFFF')
+      ->required());
   }
 
 }
 ```
 
-Each `add()` starts from a copy of the shape, so `link_color` and
+Each `add()` starts from the shape, so `link_color` and
 `background_color` take the same pattern and the same message. A use
-may make the shape stricter, as `setRequired(TRUE)` does here, and
+may make the shape stricter, as `required()` does here, and
 never looser: a use that would allow more than the shape is refused
 with a message that names both.
 
@@ -103,7 +108,7 @@ The shape itself is written once, titled by its label:
 ```
 
 Its `type` allows `null` because whether a value may be empty is
-decided where the shape is used, here by `setRequired(TRUE)`. Send
+decided where the shape is used, here by `required()`. Send
 `blue` and `#fff`, and the tool refuses both with the shape's message,
 under the dialect's code for the keyword, `pattern`:
 

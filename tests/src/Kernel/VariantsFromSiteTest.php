@@ -155,7 +155,8 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     // checked; its tags' uniqueItems is the stock UniqueItems.
     $strip = $entry->variants->variants['strip']->child;
     $this->assertSame(['schema' => ['not' => ['const' => 'Untitled']]], $strip->getDefinition('caption')->getConstraint('JsonSchema'));
-    $this->assertSame([], $strip->getDefinition('tags')->getConstraint('UniqueItems'));
+    // Given no options, held as none (BlueprintAdapterBase::settleOptions()).
+    $this->assertSame('{"UniqueItems":null}', json_encode(array_intersect_key($strip->getDefinition('tags')->getConstraints(), ['UniqueItems' => TRUE])));
     $this->assertArrayNotHasKey('JsonSchema', $strip->getDefinition('tags')->getConstraints());
   }
 
@@ -308,7 +309,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
         $this->assertSame($message, $e->getMessage());
       }
     }
-    // A boolean schema holds no keys, as addSchema() refuses it.
+    // A boolean schema holds no keys, as add() refuses it.
     $boolean = [
       'SiteList::add("two") was handed the boolean schema false, which says only whether a value is allowed: a variant is the schema of what it holds, Schema::object() with its properties and the like.' => static fn () => $list->add('two', 'Two', schema: Schema::boolean(FALSE)),
       'SiteList::addDefs() for the def "any" was handed the boolean schema true, which says only whether a value is allowed: a variant is the schema of what it holds, Schema::object() with its properties and the like.' => static fn () => $list->addDefs(['any' => Schema::boolean(TRUE)]),

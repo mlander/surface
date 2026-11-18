@@ -21,9 +21,9 @@ final class UndeclaredDoesNotApplyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('frequency', Schema::enum(['weekly', 'monthly'])
+    $inputs->add('frequency', Schema::enum(['weekly', 'monthly'])
       ->title('Frequency'));
-    $inputs->addSchema('send_day', Schema::string()
+    $inputs->add('send_day', Schema::string()
       ->title('Send day'));
   }
 

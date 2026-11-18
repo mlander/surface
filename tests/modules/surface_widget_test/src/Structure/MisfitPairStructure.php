@@ -19,7 +19,7 @@ final class MisfitPairStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('left', Schema::string()
+    $inputs->add('left', Schema::string()
       ->title(t('Left')));
   }
 

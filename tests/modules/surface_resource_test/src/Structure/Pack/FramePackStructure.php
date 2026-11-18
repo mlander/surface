@@ -28,7 +28,7 @@ final class FramePackStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('capacity', Schema::integer()
+    $inputs->add('capacity', Schema::integer()
       ->title(t('Capacity'))
       ->minimum(10));
 

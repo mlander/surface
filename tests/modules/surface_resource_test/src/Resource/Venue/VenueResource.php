@@ -34,7 +34,7 @@ final class VenueResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('layout', Schema::options([
+    $inputs->add('layout', Schema::options([
       'theatre' => t('Theatre'),
       'banquet' => t('Banquet'),
       'standing' => t('Standing'),
@@ -42,7 +42,7 @@ final class VenueResource implements ResourceInterface {
       ->title(t('Layout'))
       ->default('theatre')
       ->required());
-    $inputs->addSchema('capacity', Schema::integer()
+    $inputs->add('capacity', Schema::integer()
       ->title(t('Capacity'))
       ->default(80)
       ->minimum(1)

@@ -103,7 +103,7 @@ final class VenueResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Name'))
       ->maxLength(128)
       ->required());
@@ -133,14 +133,14 @@ final class VenueResource implements ResourceInterface {
       using: Slugify::class,
     );
 
-    $inputs->addSchema('capacity', Schema::integer()
+    $inputs->add('capacity', Schema::integer()
       ->title(t('Capacity'))
       ->description(t('How many people the venue holds.'))
       ->minimum(1)
       ->maximum(100000)
       ->required());
 
-    $inputs->addSchema('address', Schema::string()
+    $inputs->add('address', Schema::string()
       ->title(t('Address'))
       ->maxLength(255));
 
@@ -152,14 +152,14 @@ final class VenueResource implements ResourceInterface {
       description: t('The rooms an event at the venue may be held in.'),
     );
 
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title(t('Weight'))
       ->description(t('Its place among the venues: lighter first.'))
       ->default(0)
       ->minimum(-1000)
       ->maximum(1000));
 
-    $inputs->addSchema('status', Schema::bool()
+    $inputs->add('status', Schema::bool()
       ->title(t('Enabled'))
       ->description(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'))
       ->default(TRUE));

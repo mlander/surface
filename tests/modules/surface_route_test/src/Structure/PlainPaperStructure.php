@@ -22,7 +22,7 @@ final class PlainPaperStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title('Weight')
       ->default(120));
   }

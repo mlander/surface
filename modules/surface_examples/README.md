@@ -200,7 +200,7 @@ from example 2's resource.
 
 Three settings, each one schema: its type, its label, and what it
 allows, read into the definitions the module checks values against
-(`addSchema()`, [Authoring takes a Schema](../../docs/decisions.md#authoring-takes-a-schema)).
+(`add()`, [Authoring takes a Schema](../../docs/decisions.md#authoring-takes-a-schema)).
 The operation at the top, `configure`, is how the
 resource is asked for: it needs nothing, only an account that may
 administer site configuration may ask, and its description is what a
@@ -226,17 +226,17 @@ final class RegistrationStep1Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema(self::TITLE, Schema::string()
+    $inputs->add(self::TITLE, Schema::string()
       ->title(t('Event title'))
       ->required());
 
-    $inputs->addSchema(self::CAPACITY, Schema::integer()
+    $inputs->add(self::CAPACITY, Schema::integer()
       ->title(t('Capacity'))
       ->minimum(1)
       ->maximum(1000)
       ->default(50));
 
-    $inputs->addSchema(self::OPEN, Schema::bool()
+    $inputs->add(self::OPEN, Schema::bool()
       ->title(t('Registration open'))
       ->default(TRUE));
   }
@@ -354,21 +354,28 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::TITLE, 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->add(self::TITLE, Schema::string()
+      ->title(t('Event title'))
+      ->required());
 
-    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::OPEN, Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
 
-    $inputs->add(self::VENUE, 'string', t('Venue'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->setRequired(TRUE);
+    $inputs->add(self::VENUE, Schema::string()
+      ->title(t('Venue'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->required());
 
-    $inputs->add(self::ROOM, 'string', t('Room'))
-      ->setRequired(TRUE)
-      ->addConstraint('EventVenueRoom');
+    $inputs->add(self::ROOM, Schema::string()
+      ->title(t('Room'))
+      ->check('drupal:EventVenueRoom')
+      ->required());
 
-    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add(self::CAPACITY, Schema::integer()
+      ->title(t('Capacity'))
+      ->default(50)
+      ->minimum(1));
   }
 
   /**
@@ -378,8 +385,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * key is spelled as a string: rename the key, rename the parameter.
    */
   #[RefinesInput(self::ROOM)]
-  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $room->addConstraint('RoomOfEventVenue', ['venue' => $venue]);
+  public static function roomInVenue(string $venue): Schema {
+    return Schema::any()->check('drupal:RoomOfEventVenue', ['venue' => $venue]);
   }
 
   /**
@@ -390,16 +397,17 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * self::ROOM by its name.
    */
   #[RefinesInput(self::CAPACITY)]
-  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(string $room): Schema {
     $seats = Venues::seats($room);
-    if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
-        ->setDescription(t('Up to @seats for the @room.', [
-          '@seats' => $seats,
-          '@room' => Venues::rooms()[$room],
-        ]));
+    if ($seats === NULL) {
+      return Schema::any();
     }
-    return $capacity;
+    return Schema::any()
+      ->maximum($seats)
+      ->description(t('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
   }
 
 }
@@ -473,7 +481,7 @@ the resource uses. It edits the same config object. It chooses from
 Its page says what the two forms share and counts both, from the files,
 the way the landing page counts every class: without the namespace, the
 use statements, blank lines and comments. The twin is **94 lines of
-code**; example 2's resource and its storage are **45**. The storage is
+code**; example 2's resource and its storage are **53**. The storage is
 counted with the resource because the twin names its config object
 itself, which the resource leaves to its storage.
 
@@ -636,7 +644,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 42 |
+| [`modules/surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 50 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of a venue the site has, a Choice whose list is the site's | 17 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php`](src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php) | the constraint the room refiner adds: a room of the chosen venue | 6 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php) | their validator: reads the rooms, then holds the value to them as Choice does | 14 |
@@ -675,24 +683,31 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->add('title', Schema::string()
+      ->title(t('Event title'))
+      ->required());
 
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add('open', Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
 
-    $inputs->add('venue', 'string', t('Venue'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+    $inputs->add('venue', Schema::options(Venues::VENUES)->type('string')
+      ->title(t('Venue'))
+      ->required());
 
-    $inputs->add('room', 'string', t('Room'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+    $inputs->add('room', Schema::options(Venues::rooms())->type('string')
+      ->title(t('Room'))
+      ->required());
 
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->default(50)
+      ->minimum(1));
 
-    $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
-      ->setRequired(TRUE);
+    $inputs->add('pricing', Schema::string()
+      ->title(t('Pricing'))
+      ->default('free')
+      ->required());
 
     $inputs->attachVariants('ticket', by: 'pricing', label: t('Ticket'));
 
@@ -703,8 +718,8 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * The room must be one of the chosen venue's rooms.
    */
   #[RefinesInput('room')]
-  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
+  public static function roomInVenue(string $venue): Schema {
+    return Schema::options(Venues::rooms($venue));
   }
 
   /**
@@ -714,16 +729,17 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * its lower bound and has no upper one.
    */
   #[RefinesInput('capacity')]
-  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(string $room): Schema {
     $seats = Venues::seats($room);
-    if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
-        ->setDescription(t('Up to @seats for the @room.', [
-          '@seats' => $seats,
-          '@room' => Venues::rooms()[$room],
-        ]));
+    if ($seats === NULL) {
+      return Schema::any();
     }
-    return $capacity;
+    return Schema::any()
+      ->maximum($seats)
+      ->description(t('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
   }
 
 }
@@ -747,8 +763,9 @@ final class FreeTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'))
-      ->setDescription(t('Shown beside the register button, for example "Donations welcome".'));
+    $inputs->add('note', Schema::string()
+      ->title(t('Note'))
+      ->description(t('Shown beside the register button, for example "Donations welcome".')));
   }
 
 }
@@ -768,13 +785,15 @@ final class PaidTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('price', 'float', t('Price'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 0.01]);
+    $inputs->add('price', Schema::number()
+      ->title(t('Price'))
+      ->minimum(0.01)
+      ->required());
 
-    $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);
+    $inputs->add('currency', Schema::enum(['EUR', 'GBP', 'USD'])
+      ->title(t('Currency'))
+      ->default('EUR')
+      ->required());
   }
 
 }
@@ -792,10 +811,12 @@ final class ContactStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('email', 'email', t('Email'))
-      ->setRequired(TRUE);
+    $inputs->add('email', Schema::string()->format('email')
+      ->title(t('Email'))
+      ->required());
 
-    $inputs->add('phone', 'string', t('Phone'));
+    $inputs->add('phone', Schema::string()
+      ->title(t('Phone')));
   }
 
 }
@@ -815,10 +836,10 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 41 |
-| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 11 |
-| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 15 |
-| [`modules/surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 8 |
+| [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 49 |
+| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 12 |
+| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 17 |
+| [`modules/surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 10 |
 | [`modules/surface_examples/src/Storage/RegistrationStep3Storage.php`](src/Storage/RegistrationStep3Storage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step3` | the route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.registration_step3` | the config schema, generated from the class | 49 |
@@ -861,8 +882,8 @@ only kind an instance method may be:
   nothing.
 - **The stewards follow the capacity.** The structure cannot name
   example 3's capacity, since it is meant for any event: it reads a
-  `capacity` port, `$inputs->reads('capacity', 'integer', required:
-  TRUE)`, and its method on `stewards` watches the port, one steward per
+  `capacity` port, `$inputs->reads('capacity',
+  Schema::integer()->required())`, and its method on `stewards` watches the port, one steward per
   fifty people, at least one. The alter wires the port to example 3's
   key, `reads: ['capacity' => 'capacity']`; another module attaching the
   structure would wire it to a key of its own.
@@ -909,21 +930,25 @@ final class ComplianceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('capacity', 'integer', required: TRUE);
+    $inputs->reads('capacity', Schema::integer()->required());
 
-    $inputs->add('license', License::class, t('Event license'));
+    $inputs->add('license', Schema::of(License::class)
+      ->title(t('Event license')));
 
-    $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
+    $inputs->add('stewards', Schema::integer()
+      ->title(t('Stewards'))
+      ->default(1)
+      ->required());
   }
 
   /**
    * One steward for every fifty people, at least one.
    */
   #[RefinesInput('stewards')]
-  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+  public static function stewardsForCapacity(int $capacity): Schema {
     $n = max(1, (int) ceil($capacity / 50));
-    return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription(new PluralTranslatableMarkup(
+    return Schema::any()->minimum($n)
+      ->description(new PluralTranslatableMarkup(
         $n,
         'At least 1 steward for @capacity attendees.',
         'At least @count stewards for @capacity attendees.',
@@ -973,7 +998,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     // an invalid sibling.
     $inputs->narrow('capacity')
       ->when(Condition::absent('license'))
-      ->constrain('Range', ['max' => 100])
+      ->constrain(Schema::any()->maximum(100))
       ->because($this->t('Up to 100 without an event license.'));
   }
 
@@ -991,14 +1016,14 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    * @see docs/decisions.md#static-by-default-runtime-by-declaration
    */
   #[RefinesInput('room', runtime: TRUE)]
-  public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    $rooms = $room->getConstraints()['LabeledChoice']['choices'] ?? [];
+  public function openRooms(Schema $room, string $venue): Schema {
+    $set = ChoiceSet::of($room);
+    $rooms = $set === NULL ? [] : array_intersect_key($set->labels, array_flip($set->values));
     $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
-    if ($closed === [] || !$room instanceof DataDefinition) {
-      return $room;
+    if ($closed === []) {
+      return Schema::any();
     }
-    $room->addConstraint('LabeledChoice', ['choices' => array_diff_key($rooms, $closed)]);
-    return $room->setDescription($this->formatPlural(
+    return Schema::enum(array_keys(array_diff_key($rooms, $closed)))->description($this->formatPlural(
       count($closed),
       'The @rooms is closed.',
       'The @rooms are closed.',
@@ -1050,7 +1075,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/surface_examples_compliance/surface_examples_compliance.info.yml`](../surface_examples_compliance/surface_examples_compliance.info.yml) | the module: a second one, which example 3 does not know | 9 |
 | [`modules/surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php`](../surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php) | the alter: attaches the structure, rewords the title, caps the capacity without a license, and leaves closed rooms out | 32 |
-| [`modules/surface_examples_compliance/src/Structure/ComplianceStructure.php`](../surface_examples_compliance/src/Structure/ComplianceStructure.php) | the structure it attaches: a license and the stewards, which read the capacity through a port | 19 |
+| [`modules/surface_examples_compliance/src/Structure/ComplianceStructure.php`](../surface_examples_compliance/src/Structure/ComplianceStructure.php) | the structure it attaches: a license and the stewards, which read the capacity through a port | 23 |
 | [`modules/surface_examples_compliance/src/Shape/License.php`](../surface_examples_compliance/src/Shape/License.php) | the license: a named shape, four digits | 11 |
 | [`modules/surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml`](../surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml), entry `surface_examples.registration_step3.third_party.surface_examples_compliance` | the config schema of what it stores on example 3 | 18 |
 
@@ -1293,20 +1318,25 @@ final class BulletinResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('frequency', 'string', t('Frequency'), default: 'weekly')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['weekly' => t('Weekly'), 'monthly' => t('Monthly')],
-      ]);
+    $inputs->add('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
+      ->title(t('Frequency'))
+      ->default('weekly')
+      ->required());
 
-    $inputs->add('send_day', 'string', t('Send day'), default: 'monday')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['monday' => t('Monday'), 'wednesday' => t('Wednesday'), 'friday' => t('Friday')],
-      ]);
+    $inputs->add('send_day', Schema::options([
+      'monday' => t('Monday'),
+      'wednesday' => t('Wednesday'),
+      'friday' => t('Friday'),
+    ])
+      ->title(t('Send day'))
+      ->default('monday')
+      ->required());
 
-    $inputs->add('items', 'integer', t('Items per issue'), default: 5)
-      ->addConstraint('Range', ['min' => 1, 'max' => 20]);
+    $inputs->add('items', Schema::integer()
+      ->title(t('Items per issue'))
+      ->default(5)
+      ->minimum(1)
+      ->maximum(20));
 
     $inputs->narrow('send_day')
       ->when(Condition::equals('frequency', 'monthly'))
@@ -1314,7 +1344,7 @@ final class BulletinResource implements ResourceInterface {
 
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
-      ->constrain('Range', ['max' => 5])
+      ->constrain(Schema::any()->maximum(5))
       ->because(t('Up to 5 in a weekly issue.'));
   }
 
@@ -1363,7 +1393,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/BulletinResource.php`](src/Resource/BulletinResource.php) | the resource: three keys and two declared rules | 29 |
+| [`modules/surface_examples/src/Resource/BulletinResource.php`](src/Resource/BulletinResource.php) | the resource: three keys and two declared rules | 34 |
 | [`modules/surface_examples/src/Storage/BulletinStorage.php`](src/Storage/BulletinStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step7` | the route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.bulletin` | the config schema, generated from the class | 20 |
@@ -1392,14 +1422,17 @@ final class PersonStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('listed', 'boolean');
+    $inputs->reads('listed', Schema::bool());
 
-    $inputs->add('name', 'string', t('Name'))
-      ->setRequired(TRUE);
+    $inputs->add('name', Schema::string()
+      ->title(t('Name'))
+      ->required());
 
-    $inputs->add('email', 'email', t('Email'));
+    $inputs->add('email', Schema::string()->format('email')
+      ->title(t('Email')));
 
-    $inputs->add('phone', PhoneNumber::class, t('Phone'));
+    $inputs->add('phone', Schema::of(PhoneNumber::class)
+      ->title(t('Phone')));
 
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))
@@ -1448,15 +1481,17 @@ final class ReviewStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('reviewed_on', 'string', t('Reviewed on'))
-      ->setDescription(t('YYYY-MM-DD.'))
-      ->setSetting('widget', 'date')
-      ->addConstraint('Regex', [
+    $inputs->add('reviewed_on', Schema::string()
+      ->title(t('Reviewed on'))
+      ->description(t('YYYY-MM-DD.'))
+      ->check('drupal:Regex', [
         'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
-      ]);
+      ])
+      ->ui(widget: 'date'));
 
-    $inputs->add('reviewed_by', 'string', t('Reviewed by'));
+    $inputs->add('reviewed_by', Schema::string()
+      ->title(t('Reviewed by')));
 
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))
@@ -1482,7 +1517,9 @@ final class PressResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
+    $inputs->add('public', Schema::bool()
+      ->title(t('Show on the press page'))
+      ->default(TRUE));
 
     $inputs->attach('contact', PersonStructure::class, t('Press contact'), reads: ['listed' => 'public']);
 
@@ -1513,17 +1550,26 @@ final class InfoDeskResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('phone', PhoneNumber::class, t('Desk phone'))
-      ->setRequired(TRUE);
+    $inputs->add('phone', Schema::of(PhoneNumber::class)
+      ->title(t('Desk phone'))
+      ->required());
 
-    $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+    $inputs->add('in_program', Schema::bool()
+      ->title(t('Listed in the printed program'))
+      ->default(FALSE));
 
     // A pair only the desk holds: an anonymous map, written inline.
     $inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
-      $location->add('lat', 'float', t('Latitude'), default: 43.6532)
-        ->addConstraint('Range', ['min' => -90, 'max' => 90]);
-      $location->add('lng', 'float', t('Longitude'), default: -79.3832)
-        ->addConstraint('Range', ['min' => -180, 'max' => 180]);
+      $location->add('lat', Schema::number()
+        ->title(t('Latitude'))
+        ->default(43.6532)
+        ->minimum(-90)
+        ->maximum(90));
+      $location->add('lng', Schema::number()
+        ->title(t('Longitude'))
+        ->default(-79.3832)
+        ->minimum(-180)
+        ->maximum(180));
     });
 
     $inputs->attach('lead', PersonStructure::class, t('Desk lead'), reads: ['listed' => 'in_program']);
@@ -1583,12 +1629,12 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 14 |
+| [`modules/surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 17 |
 | [`modules/surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 11 |
-| [`modules/surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 17 |
-| [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 13 |
+| [`modules/surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 19 |
+| [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 15 |
 | [`modules/surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
-| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four | 21 |
+| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four | 30 |
 | [`modules/surface_examples/src/Storage/InfoDeskStorage.php`](src/Storage/InfoDeskStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8` | the press page's route | 8 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8_desk` | the information desk's route | 8 |
@@ -1621,8 +1667,13 @@ final class TicketSalesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, label: t('On sale'), default: FALSE)
-      ->setDescription(t('Which ticket types can be bought.'));
+    $inputs->addEach(
+      'on_sale',
+      Schema::bool()->default(FALSE),
+      from: TicketTypes::class,
+      label: t('On sale'),
+      description: t('Which ticket types can be bought.'),
+    );
 
     $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
   }
@@ -1646,12 +1697,17 @@ final class TicketLimitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('per_order', 'integer', t('Per order'), default: 4)
-      ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->add('per_order', Schema::integer()
+      ->title(t('Per order'))
+      ->default(4)
+      ->minimum(1)
+      ->maximum(10));
 
-    $inputs->add('waiting_list', 'boolean', t('Waiting list when sold out'), default: FALSE);
+    $inputs->add('waiting_list', Schema::bool()
+      ->title(t('Waiting list when sold out'))
+      ->default(FALSE));
 
-    $inputs->reads('selling', 'boolean');
+    $inputs->reads('selling', Schema::bool());
 
     $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
 
@@ -1793,8 +1849,8 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/TicketSalesResource.php`](src/Resource/TicketSalesResource.php) | the resource: a checkbox and a set of limits per ticket type | 13 |
-| [`modules/surface_examples/src/Structure/TicketLimitStructure.php`](src/Structure/TicketLimitStructure.php) | one type's limits: two keys that apply while it is on sale, read through a port | 11 |
+| [`modules/surface_examples/src/Resource/TicketSalesResource.php`](src/Resource/TicketSalesResource.php) | the resource: a checkbox and a set of limits per ticket type | 18 |
+| [`modules/surface_examples/src/Structure/TicketLimitStructure.php`](src/Structure/TicketLimitStructure.php) | one type's limits: two keys that apply while it is on sale, read through a port | 16 |
 | [`modules/surface_examples/src/Keys/TicketTypes.php`](src/Keys/TicketTypes.php) | the provider: lists the ticket types from the site's configuration | 17 |
 | [`modules/surface_examples/src/Storage/TicketSalesStorage.php`](src/Storage/TicketSalesStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step9` | the route | 8 |
@@ -1874,11 +1930,15 @@ final class FeesStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('standard', 'float', t('Standard fee'), default: 20.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('standard', Schema::number()
+      ->title(t('Standard fee'))
+      ->default(20.0)
+      ->minimum(0));
 
-    $inputs->add('concession', 'float', t('Concession fee'), default: 10.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('concession', Schema::number()
+      ->title(t('Concession fee'))
+      ->default(10.0)
+      ->minimum(0));
   }
 
 }
@@ -1905,13 +1965,19 @@ final class ProgramResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('headline', 'string', t('Headline'))
-      ->setRequired(TRUE);
+    $inputs->add('headline', Schema::string()
+      ->title(t('Headline'))
+      ->required());
 
-    $inputs->add('sessions', 'integer', t('Sessions'), default: 8)
-      ->addConstraint('Range', ['min' => 1, 'max' => 30]);
+    $inputs->add('sessions', Schema::integer()
+      ->title(t('Sessions'))
+      ->default(8)
+      ->minimum(1)
+      ->maximum(30));
 
-    $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+    $inputs->add('published', Schema::bool()
+      ->title(t('Published'))
+      ->default(FALSE));
 
     $inputs->attach('fees', FeesStructure::class, t('Fees'));
   }
@@ -2085,8 +2151,8 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/ProgramResource.php`](src/Resource/ProgramResource.php) | the resource: four keys, and two operations, one of which changes nothing | 22 |
-| [`modules/surface_examples/src/Structure/FeesStructure.php`](src/Structure/FeesStructure.php) | the fees: two keys, naming their access class | 9 |
+| [`modules/surface_examples/src/Resource/ProgramResource.php`](src/Resource/ProgramResource.php) | the resource: four keys, and two operations, one of which changes nothing | 28 |
+| [`modules/surface_examples/src/Structure/FeesStructure.php`](src/Structure/FeesStructure.php) | the fees: two keys, naming their access class | 13 |
 | [`modules/surface_examples/src/Access/FeesAccess.php`](src/Access/FeesAccess.php) | the access class: locks the fees by permission, then once the program is published | 18 |
 | [`modules/surface_examples/src/Storage/ProgramStorage.php`](src/Storage/ProgramStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step10` | the route that configures | 8 |
@@ -2124,32 +2190,41 @@ final class DoorsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('opens', 'string', t('Doors open at'), default: '18:30')
-      ->setRequired(TRUE)
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->add('opens', Schema::string()
+      ->title(t('Doors open at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->default('18:30')
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 18:30.'),
-      ]);
+      ])
+      ->ui(widget: 'time')
+      ->required());
+    $inputs->add('days', Schema::list(Schema::options([
+      'fri' => t('Friday'),
+      'sat' => t('Saturday'),
+      'sun' => t('Sunday'),
+    ]))
+      ->title(t('Days'))
+      ->default(['fri', 'sat'])
+      ->required());
 
-    $day = DataDefinition::create('string')
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['fri' => t('Friday'), 'sat' => t('Saturday'), 'sun' => t('Sunday')],
-      ]);
-    $inputs->addList('days', $day, t('Days'), default: ['fri', 'sat'])
-      ->setRequired(TRUE);
+    $inputs->add('badges', Schema::options([
+      'printed' => t('Printed at the door'),
+      'digital' => t('On the phone'),
+      'none' => t('No badges'),
+    ])
+      ->title(t('Badges'))
+      ->default('printed')
+      ->ui(widget: 'radios'));
 
-    $inputs->add('badges', 'string', t('Badges'), default: 'printed')
-      ->setSetting('widget', 'radios')
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['printed' => t('Printed at the door'), 'digital' => t('On the phone'), 'none' => t('No badges')],
-      ]);
+    $inputs->add('notes', Schema::string()
+      ->title(t('Notes for the door team'))
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('notes', 'string', t('Notes for the door team'))
-      ->setSetting('multiline', TRUE);
-
-    $inputs->addList('greeters', 'string', t('Greeters'), default: []);
+    $inputs->add('greeters', Schema::list(Schema::string())
+      ->title(t('Greeters'))
+      ->default([]));
   }
 
 }
@@ -2207,7 +2282,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/DoorsResource.php`](src/Resource/DoorsResource.php) | the resource: five keys, each drawn by a stock widget | 32 |
+| [`modules/surface_examples/src/Resource/DoorsResource.php`](src/Resource/DoorsResource.php) | the resource: five keys, each drawn by a stock widget | 42 |
 | [`modules/surface_examples/src/Storage/DoorsStorage.php`](src/Storage/DoorsStorage.php) | the storage: names the config object and the keys it always holds | 4 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step11` | the route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.doors` | the config schema, fully validatable, generated from the class | 31 |
@@ -2243,8 +2318,10 @@ final class SpotlightResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
-      ->setRequired(TRUE);
+    $inputs->add('component', Schema::string()
+      ->title(t('Component'))
+      ->default('surface_examples:card')
+      ->required());
 
     $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
@@ -2615,7 +2692,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 14 |
+| [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 16 |
 | [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 42 |
 | [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 220 |
 | [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those surface.settings:components_offered allows; the main module's | 31 |
@@ -2660,7 +2737,8 @@ final class ComponentBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('component', 'string', t('Component'));
+    $inputs->add('component', Schema::string()
+      ->title(t('Component')));
 
     $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
@@ -2975,7 +3053,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_component_block/surface_examples_component_block.info.yml`](../surface_examples_component_block/surface_examples_component_block.info.yml) | the module the block lives in | 10 |
-| [`modules/surface_examples_component_block/src/Structure/ComponentBlockStructure.php`](../surface_examples_component_block/src/Structure/ComponentBlockStructure.php) | the block's structure: example 12's three lines under the block's id | 8 |
+| [`modules/surface_examples_component_block/src/Structure/ComponentBlockStructure.php`](../surface_examples_component_block/src/Structure/ComponentBlockStructure.php) | the block's structure: example 12's three lines under the block's id | 9 |
 | [`modules/surface_examples_component_block/src/Plugin/Block/ComponentBlock.php`](../surface_examples_component_block/src/Plugin/Block/ComponentBlock.php) | the block plugin: names the structure and draws the chosen component | 96 |
 | [`modules/surface_examples_component_block/config/schema/surface_examples_component_block.schema.yml`](../surface_examples_component_block/config/schema/surface_examples_component_block.schema.yml), entry `block.settings.surface_component` | the config schema of the block's settings | 14 |
 | [`modules/surface_examples/src/Hook/SpotlightBlockHooks.php`](src/Hook/SpotlightBlockHooks.php) | places the Spotlight and Tonight blocks once both modules are enabled | 36 |
@@ -3025,14 +3103,20 @@ final class MailerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('sender', 'email', t('Sender'), default: 'tickets@example.com')
-      ->setRequired(TRUE);
+    $inputs->add('sender', Schema::string()->format('email')
+      ->title(t('Sender'))
+      ->default('tickets@example.com')
+      ->required());
 
-    $inputs->add('endpoint', 'uri', t('Mail service'), default: 'https://mail.example.com/v1/send')
-      ->setRequired(TRUE);
+    $inputs->add('endpoint', Schema::string()->format('uri')
+      ->title(t('Mail service'))
+      ->default('https://mail.example.com/v1/send')
+      ->required());
 
-    $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
-      ->setRequired(TRUE);
+    $inputs->add('source', Schema::string()
+      ->title(t('Credential source'))
+      ->default('pasted')
+      ->required());
 
     $inputs->attachVariants('credential', by: 'source', label: t('Credential'), from: CredentialSources::class);
   }
@@ -3124,10 +3208,11 @@ final class PastedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $api_key = $inputs->add('api_key', 'string', t('API key'))
-      ->setDescription(t('The key the mail service issued, pasted here.'))
-      ->setRequired(TRUE);
-    DefinitionMetadata::setSecret($api_key);
+    $inputs->add('api_key', Schema::string()
+      ->title(t('API key'))
+      ->description(t('The key the mail service issued, pasted here.'))
+      ->writeOnly(TRUE)
+      ->required());
   }
 
 }
@@ -3146,10 +3231,11 @@ final class ManagedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('key_id', 'string', t('Key'))
-      ->setDescription(t('A key the site manages; its value is read where it is used, never stored here.'))
-      ->setRequired(TRUE)
-      ->addConstraint('ManagedKey');
+    $inputs->add('key_id', Schema::string()
+      ->title(t('Key'))
+      ->description(t('A key the site manages; its value is read where it is used, never stored here.'))
+      ->check('drupal:ManagedKey')
+      ->required());
   }
 
 }
@@ -3273,12 +3359,15 @@ final class WebhookResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('endpoint', 'uri', t('Endpoint'), default: 'https://hooks.example.com/sales')
-      ->setRequired(TRUE);
+    $inputs->add('endpoint', Schema::string()->format('uri')
+      ->title(t('Endpoint'))
+      ->default('https://hooks.example.com/sales')
+      ->required());
 
-    $api_key = $inputs->add('api_key', 'string', t('API key'))
-      ->setDescription(t('The key each post is signed with, pasted here.'));
-    DefinitionMetadata::setSecret($api_key);
+    $inputs->add('api_key', Schema::string()
+      ->title(t('API key'))
+      ->description(t('The key each post is signed with, pasted here.'))
+      ->writeOnly(TRUE));
   }
 
 }
@@ -3311,9 +3400,10 @@ final class WebhookKeyAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('key_id', 'string', $this->t('Key'))
-      ->setDescription($this->t('A key the site manages, used in place of a pasted one.'))
-      ->addConstraint('ManagedKey');
+    $inputs->add('key_id', Schema::string()
+      ->title($this->t('Key'))
+      ->description($this->t('A key the site manages, used in place of a pasted one.'))
+      ->check('drupal:ManagedKey'));
     $inputs->describe('third_party_settings.surface_examples_keys', label: $this->t('Managed key'), after: 'api_key');
     // A managed key chosen: a pasted one means nothing beside it.
     $inputs->narrow('api_key')
@@ -3561,17 +3651,17 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 17 |
+| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 23 |
 | [`modules/surface_examples/src/Variants/CredentialSources.php`](src/Variants/CredentialSources.php) | the provider: the pasted source always, the managed source while the keys module is on, both named for storage | 28 |
-| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 12 |
-| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 12 |
+| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 13 |
+| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 13 |
 | [`modules/surface_examples/src/Storage/MailerStorage.php`](src/Storage/MailerStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step14` | the mailer's route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer` | the mailer's config schema, generated from the class | 18 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer.credential.pasted` | the pasted source's config schema | 10 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer.credential.managed` | the managed source's config schema, with the pasted key it keeps | 13 |
 | [`modules/surface_examples/config/install/surface_examples.mailer.yml`](config/install/surface_examples.mailer.yml) | the mailer's shipped settings | 5 |
-| [`modules/surface_examples/src/Resource/WebhookResource.php`](src/Resource/WebhookResource.php) | the alter's way: an endpoint and a pasted key, and nothing of managed keys | 15 |
+| [`modules/surface_examples/src/Resource/WebhookResource.php`](src/Resource/WebhookResource.php) | the alter's way: an endpoint and a pasted key, and nothing of managed keys | 18 |
 | [`modules/surface_examples/src/Storage/WebhookStorage.php`](src/Storage/WebhookStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/src/WebhookSigner.php`](src/WebhookSigner.php) | the webhook's code: signs a post with the key the webhook's values hold where it is used | 16 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step14_webhook` | the webhook's route | 8 |
@@ -3584,7 +3674,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php`](../surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php) | the constraint a key naming a managed key declares | 15 |
 | [`modules/surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php`](../surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php) | its validator: refuses a name the site does not manage | 19 |
 | [`modules/surface_examples_keys/src/Plugin/SurfaceOptionsResolver/ManagedKeyOptions.php`](../surface_examples_keys/src/Plugin/SurfaceOptionsResolver/ManagedKeyOptions.php) | the resolver that reads the constraint as the list of keys | 28 |
-| [`modules/surface_examples_keys/src/Alter/WebhookKeyAlter.php`](../surface_examples_keys/src/Alter/WebhookKeyAlter.php) | the alter: mounts a managed key on the webhook, rules the pasted key out once one is chosen, and resolves it to the managed key's value at use | 17 |
+| [`modules/surface_examples_keys/src/Alter/WebhookKeyAlter.php`](../surface_examples_keys/src/Alter/WebhookKeyAlter.php) | the alter: mounts a managed key on the webhook, rules the pasted key out once one is chosen, and resolves it to the managed key's value at use | 18 |
 | [`modules/surface_examples_keys/src/Compute/ManagedKeyValue.php`](../surface_examples_keys/src/Compute/ManagedKeyValue.php) | a managed key's value, for the name the webhook stores | 6 |
 | [`modules/surface_examples_keys/config/schema/surface_examples_keys.schema.yml`](../surface_examples_keys/config/schema/surface_examples_keys.schema.yml), entry `surface_examples_keys.keys` | the keys' config schema, written by hand | 20 |
 | [`modules/surface_examples_keys/config/schema/surface_examples_keys.schema.yml`](../surface_examples_keys/config/schema/surface_examples_keys.schema.yml), entry `surface_examples.webhook.third_party.surface_examples_keys` | the config schema of what it stores on the webhook | 11 |
@@ -3792,40 +3882,66 @@ final class VenueResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('label', 'string', t('Name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->add('label', Schema::string()
+      ->title(t('Name'))
+      ->maxLength(128)
+      ->required());
 
-    $inputs->compute('id', 'machine_name', t('Machine name'),
-      from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-      ->addConstraint('Length', ['max' => 32]);
+    $inputs->compute(
+      'id',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Machine name'))
+        ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+        ->check('drupal:Length', ['max' => 32]),
+      from: ['label'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
 
-    $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
-      ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
-        'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
-      ])
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->compute(
+      'slug',
+      Schema::string()
+        ->title(t('Slug'))
+        ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+        ->check('drupal:Regex', [
+          'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+          'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+        ])
+        ->maxLength(128),
+      from: ['label'],
+      using: Slugify::class,
+    );
 
-    $inputs->add('capacity', 'integer', t('Capacity'))
-      ->setDescription(t('How many people the venue holds.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 100000]);
+    $inputs->add('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->description(t('How many people the venue holds.'))
+      ->minimum(1)
+      ->maximum(100000)
+      ->required());
 
-    $inputs->add('address', 'string', t('Address'))
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->add('address', Schema::string()
+      ->title(t('Address'))
+      ->maxLength(255));
 
-    $inputs->attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)
-      ->setDescription(t('The rooms an event at the venue may be held in.'));
+    $inputs->attachList(
+      'rooms',
+      VenueRoomStructure::class,
+      t('Rooms'),
+      max: 20,
+      description: t('The rooms an event at the venue may be held in.'),
+    );
 
-    $inputs->add('weight', 'integer', t('Weight'), default: 0)
-      ->setDescription(t('Its place among the venues: lighter first.'))
-      ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+    $inputs->add('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->description(t('Its place among the venues: lighter first.'))
+      ->default(0)
+      ->minimum(-1000)
+      ->maximum(1000));
 
-    $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
-      ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
+    $inputs->add('status', Schema::bool()
+      ->title(t('Enabled'))
+      ->description(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'))
+      ->default(TRUE));
   }
 
 }
@@ -3888,35 +4004,43 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('offset', 'integer', t('Offset'), default: 0)
-      ->setDescription(t('How many venues to skip, in order of weight.'))
-      ->addConstraint('Range', ['min' => 0, 'max' => 10000]);
+    $inputs->add('offset', Schema::integer()
+      ->title(t('Offset'))
+      ->description(t('How many venues to skip, in order of weight.'))
+      ->default(0)
+      ->minimum(0)
+      ->maximum(10000));
 
-    $inputs->add('limit', 'integer', t('Limit'), default: 20)
-      ->setDescription(t('How many venues to answer at most.'))
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->add('limit', Schema::integer()
+      ->title(t('Limit'))
+      ->description(t('How many venues to answer at most.'))
+      ->default(20)
+      ->minimum(1)
+      ->maximum(50));
 
-    $inputs->add('status', 'boolean', t('Enabled'))
-      ->setDescription(t('Only the venues enabled, or only those disabled; left out, every venue.'));
+    $inputs->add('status', Schema::bool()
+      ->title(t('Enabled'))
+      ->description(t('Only the venues enabled, or only those disabled; left out, every venue.')));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $item = MapDataDefinition::create()
-      ->setLabel(t('Venue'))
-      ->setPropertyDefinition('id', DataDefinition::create('string')->setLabel(t('Machine name'))->setRequired(TRUE))
-      ->setPropertyDefinition('label', DataDefinition::create('string')->setLabel(t('Name'))->setRequired(TRUE))
-      ->setPropertyDefinition('capacity', DataDefinition::create('integer')->setLabel(t('Capacity'))->setRequired(TRUE))
-      ->setPropertyDefinition('weight', DataDefinition::create('integer')->setLabel(t('Weight'))->setRequired(TRUE));
-    $outputs->addList('items', $item, t('Venues'))
-      ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
-      ->setRequired(TRUE);
+    $outputs->add('items', Schema::list(Schema::object([
+      'id' => Schema::string()->title(t('Machine name'))->required(),
+      'label' => Schema::string()->title(t('Name'))->required(),
+      'capacity' => Schema::integer()->title(t('Capacity'))->required(),
+      'weight' => Schema::integer()->title(t('Weight'))->required(),
+    ])->title(t('Venue')))
+      ->title(t('Venues'))
+      ->description(t('The page of venues, lighter first, each one the account may read.'))
+      ->required());
 
-    $outputs->add('total', 'integer', t('Total'))
-      ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
-      ->setRequired(TRUE);
+    $outputs->add('total', Schema::integer()
+      ->title(t('Total'))
+      ->description(t('How many venues the filter matched that the account may read, on every page.'))
+      ->required());
   }
 
 }
@@ -3934,9 +4058,14 @@ final class VenueReorderStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('venues', VenueOrderStructure::class, t('Venues'), min: 1)
-      ->setDescription(t('Each venue to move, once, with its new weight; a venue left out keeps its own.'))
-      ->setRequired(TRUE);
+    $inputs->attachList(
+      'venues',
+      VenueOrderStructure::class,
+      t('Venues'),
+      min: 1,
+      description: t('Each venue to move, once, with its new weight; a venue left out keeps its own.'),
+      required: TRUE,
+    );
   }
 
 }
@@ -3952,14 +4081,17 @@ final class VenueOrderStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Venue'))
-      ->setDescription(t('The machine name of a venue the site has.'))
-      ->setRequired(TRUE);
+    $inputs->add('id', Schema::string()
+      ->title(t('Venue'))
+      ->description(t('The machine name of a venue the site has.'))
+      ->required());
 
-    $inputs->add('weight', 'integer', t('Weight'))
-      ->setDescription(t('Its place among the venues: lighter first.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+    $inputs->add('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->description(t('Its place among the venues: lighter first.'))
+      ->minimum(-1000)
+      ->maximum(1000)
+      ->required());
   }
 
 }
@@ -4544,12 +4676,12 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
-| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 78 |
+| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 104 |
 | [`modules/surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
-| [`modules/surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
-| [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
-| [`modules/surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 8 |
-| [`modules/surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
+| [`modules/surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 22 |
+| [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 35 |
+| [`modules/surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 13 |
+| [`modules/surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 15 |
 | [`modules/surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
 | [`modules/surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 82 |
@@ -4599,28 +4731,44 @@ final class SponsorshipResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // A venue keeps its id as a string, a user and a node as an integer.
-    $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->setDescription(t("Where the sponsor's stand is."))
-      ->setRequired(TRUE);
+    $inputs->add('venue', Schema::string()
+      ->title(t('Venue'))
+      ->description(t("Where the sponsor's stand is."))
+      ->default('riverside')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->required());
 
-    $inputs->add('contact', 'integer', t('Contact'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user'])
-      ->setDescription(t('Who answers for the sponsor.'));
+    $inputs->add('contact', Schema::integer()
+      ->title(t('Contact'))
+      ->description(t('Who answers for the sponsor.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
 
-    $inputs->add('page', 'integer', t('Announcement'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
-      ->setDescription(t('The article that announces the sponsor.'));
+    $inputs->add('page', Schema::integer()
+      ->title(t('Announcement'))
+      ->description(t('The article that announces the sponsor.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->attach('thing', ThingStructure::class, t('Featured beside'))
-      ->setDescription(t('Any content the sponsor is featured beside.'));
+    $inputs->attach(
+      'thing',
+      ThingStructure::class,
+      t('Featured beside'),
+      description: t('Any content the sponsor is featured beside.'),
+    );
 
-    $inputs->attach('setting', SettingStructure::class, t('Linked to'))
-      ->setDescription(t('A venue or a role the sponsorship is linked to.'));
+    $inputs->attach(
+      'setting',
+      SettingStructure::class,
+      t('Linked to'),
+      description: t('A venue or a role the sponsorship is linked to.'),
+    );
 
-    $inputs->attach('credit', CreditStructure::class, t('Credited on'))
-      ->setDescription(t('An article or a user the sponsor is credited on.'));
+    $inputs->attach(
+      'credit',
+      CreditStructure::class,
+      t('Credited on'),
+      description: t('An article or a user the sponsor is credited on.'),
+    );
   }
 
 }
@@ -4730,8 +4878,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_references/surface_examples_references.info.yml`](../surface_examples_references/surface_examples_references.info.yml) | the module: a second one, which needs node for the article the announcement is | 11 |
-| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys of the id's type with the constraint naming the entity type they refer to, and three of any entity type, each a structure attached | 26 |
-| [`modules/surface_examples_references/src/Structure/AnyEntityStructure.php`](../surface_examples_references/src/Structure/AnyEntityStructure.php) | a reference to an entity of any type: its entity type, then its id, and the refiner that narrows the id to the entity type chosen | 29 |
+| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys of the id's type with the constraint naming the entity type they refer to, and three of any entity type, each a structure attached | 42 |
+| [`modules/surface_examples_references/src/Structure/AnyEntityStructure.php`](../surface_examples_references/src/Structure/AnyEntityStructure.php) | a reference to an entity of any type: its entity type, then its id, and the refiner that narrows the id to the entity type chosen | 31 |
 | [`modules/surface_examples_references/src/Structure/ThingStructure.php`](../surface_examples_references/src/Structure/ThingStructure.php) | content of any type, the entity types it names in its own declaration | 4 |
 | [`modules/surface_examples_references/src/Structure/SettingStructure.php`](../surface_examples_references/src/Structure/SettingStructure.php) | a venue or a role: config entities among three | 7 |
 | [`modules/surface_examples_references/src/Structure/CreditStructure.php`](../surface_examples_references/src/Structure/CreditStructure.php) | an article or a user | 6 |
@@ -4795,27 +4943,34 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('items', RetitleItemStructure::class, t('Nodes'), min: 1, max: 50)
-      ->setDescription(t('Each node to retitle, one to fifty.'))
-      ->setRequired(TRUE);
+    $inputs->attachList(
+      'items',
+      RetitleItemStructure::class,
+      t('Nodes'),
+      min: 1,
+      max: 50,
+      description: t('Each node to retitle, one to fifty.'),
+      required: TRUE,
+    );
 
-    $inputs->add('style', 'string', t('Style'), default: TitleRewriter::TITLE)
-      ->setDescription(t('How the title of a node sent no new title is rewritten.'))
-      ->addConstraint('LabeledChoice', ['choices' => TitleRewriter::styles()]);
+    $inputs->add('style', Schema::options(TitleRewriter::styles())->type('string')
+      ->title(t('Style'))
+      ->description(t('How the title of a node sent no new title is rewritten.'))
+      ->default(TitleRewriter::TITLE));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $title = MapDataDefinition::create()
-      ->setLabel(t('Title'))
-      ->setPropertyDefinition('node', DataDefinition::create('integer')->setLabel(t('Node'))->setRequired(TRUE))
-      ->setPropertyDefinition('old', DataDefinition::create('string')->setLabel(t('Old title'))->setRequired(TRUE))
-      ->setPropertyDefinition('new', DataDefinition::create('string')->setLabel(t('New title'))->setRequired(TRUE));
-    $outputs->addList('titles', $title, t('Titles'))
-      ->setDescription(t("Each node's title before and after, in the order sent: what a dry run would write, or what was written."))
-      ->setRequired(TRUE);
+    $outputs->add('titles', Schema::list(Schema::object([
+      'node' => Schema::integer()->title(t('Node'))->required(),
+      'old' => Schema::string()->title(t('Old title'))->required(),
+      'new' => Schema::string()->title(t('New title'))->required(),
+    ])->title(t('Title')))
+      ->title(t('Titles'))
+      ->description(t("Each node's title before and after, in the order sent: what a dry run would write, or what was written."))
+      ->required());
   }
 
 }
@@ -4834,14 +4989,16 @@ final class RetitleItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('node', 'integer', t('Node'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node'])
-      ->setDescription(t('The node to retitle.'))
-      ->setRequired(TRUE);
+    $inputs->add('node', Schema::integer()
+      ->title(t('Node'))
+      ->description(t('The node to retitle.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
+      ->required());
 
-    $inputs->add('new_title', 'string', t('New title'))
-      ->setDescription(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->add('new_title', Schema::string()
+      ->title(t('New title'))
+      ->description(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
+      ->maxLength(255));
   }
 
 }
@@ -5055,8 +5212,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_retitle/surface_examples_retitle.info.yml`](../surface_examples_retitle/surface_examples_retitle.info.yml) | the module: a third one, which needs node for the pages it retitles | 11 |
-| [`modules/surface_examples_retitle/src/Resource/RetitleResource.php`](../surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 27 |
-| [`modules/surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 12 |
+| [`modules/surface_examples_retitle/src/Resource/RetitleResource.php`](../surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 34 |
+| [`modules/surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 14 |
 | [`modules/surface_examples_retitle/src/TitleRewriter.php`](../surface_examples_retitle/src/TitleRewriter.php) | the rewriter: title case, sentence case or a prefix, the same every time, where a model would suggest a title | 38 |
 | [`modules/surface_examples_retitle/src/Storage/RetitleStorage.php`](../surface_examples_retitle/src/Storage/RetitleStorage.php) | the storage: works out each title, then saves each node, and answers the titles before and after | 46 |
 | [`modules/surface_examples_retitle/surface_examples_retitle.routing.yml`](../surface_examples_retitle/surface_examples_retitle.routing.yml), entry `surface_examples.step17` | the route: the generic operation form, with the examples' panels | 8 |
@@ -5105,44 +5262,51 @@ final class CateringByMethodResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $details = ArrangementGroup::fieldset('details', t('Details'));
 
-    $inputs->add('public', 'boolean', t('Show the caterer on the event page'), default: FALSE);
+    $inputs->add('public', Schema::bool()
+      ->title(t('Show the caterer on the event page'))
+      ->default(FALSE));
 
-    $provider = $inputs->add('provider', 'string', t('Caterer'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
-    DefinitionMetadata::setExamples($provider, ['Harbour Kitchen']);
+    $inputs->add('provider', Schema::string()
+      ->title(t('Caterer'))
+      ->maxLength(128)
+      ->examples(['Harbour Kitchen'])
+      ->required());
     $inputs->describe('provider', placeholder: t('The name on the contract'));
 
-    $inputs->add('headcount', 'integer', t('Headcount'))
-      ->setDescription(t('How many people to cater for.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->add('headcount', Schema::integer()
+      ->title(t('Headcount'))
+      ->description(t('How many people to cater for.'))
+      ->minimum(1)
+      ->maximum(5000)
+      ->required());
 
-    $inputs->add('budget', 'float', t('Budget'))
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('budget', Schema::number()
+      ->title(t('Budget'))
+      ->minimum(0));
     $inputs->describe('budget', group: $details, suffix: t('EUR'));
 
-    $dietary = $inputs->addList('dietary', 'string', t('Dietary needs'), default: []);
-    $dietary->getItemDefinition()->addConstraint('LabeledChoice', [
-      'choices' => [
-        'vegetarian' => t('Vegetarian'),
-        'vegan' => t('Vegan'),
-        'gluten_free' => t('Gluten free'),
-        'halal' => t('Halal'),
-        'kosher' => t('Kosher'),
-      ],
-    ]);
+    $inputs->add('dietary', Schema::list(Schema::options([
+      'vegetarian' => t('Vegetarian'),
+      'vegan' => t('Vegan'),
+      'gluten_free' => t('Gluten free'),
+      'halal' => t('Halal'),
+      'kosher' => t('Kosher'),
+    ]))
+      ->title(t('Dietary needs'))
+      ->default([]));
 
-    $inputs->add('served_at', 'string', t('Served at'))
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->add('served_at', Schema::string()
+      ->title(t('Served at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 18:30.'),
-      ]);
+      ])
+      ->ui(widget: 'time'));
 
-    $inputs->add('notes', 'string', t('Notes for the caterer'))
-      ->setSetting('multiline', TRUE);
+    $inputs->add('notes', Schema::string()
+      ->title(t('Notes for the caterer'))
+      ->ui(widget: 'textarea'));
     $inputs->describe('notes', group: $details);
 
     $inputs->attach('contact', PersonStructure::class, t('Caterer contact'), reads: ['listed' => 'public']);
@@ -5296,7 +5460,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 49 |
+| [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 56 |
 | [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the after, the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 53 |
 | [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage both save through: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route of the properties | 8 |
@@ -5424,29 +5588,41 @@ final class EventSetupResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Event name'), default: 'Autumn meetup')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->add('name', Schema::string()
+      ->title(t('Event name'))
+      ->default('Autumn meetup')
+      ->maxLength(128)
+      ->required());
 
-    $inputs->add('date', 'string', t('Date'), default: '2026-10-17')
-      ->setDescription(t('YYYY-MM-DD.'))
-      ->setSetting('widget', 'date')
-      ->addConstraint('Regex', [
+    $inputs->add('date', Schema::string()
+      ->title(t('Date'))
+      ->description(t('YYYY-MM-DD.'))
+      ->default('2026-10-17')
+      ->check('drupal:Regex', [
         'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-17.'),
-      ]);
+      ])
+      ->ui(widget: 'date'));
 
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 100)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->add('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->default(100)
+      ->minimum(1)
+      ->maximum(5000));
 
-    $inputs->add('price', 'float', t('Ticket price'), default: 25.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('price', Schema::number()
+      ->title(t('Ticket price'))
+      ->default(25.0)
+      ->minimum(0));
     $inputs->describe('price', suffix: t('EUR'));
 
-    $inputs->add('sales_open', 'boolean', t('Ticket sales open'), default: FALSE);
+    $inputs->add('sales_open', Schema::bool()
+      ->title(t('Ticket sales open'))
+      ->default(FALSE));
 
-    $inputs->add('note', 'string', t('Note for buyers'))
-      ->setSetting('multiline', TRUE);
+    $inputs->add('note', Schema::string()
+      ->title(t('Note for buyers'))
+      ->ui(widget: 'textarea'));
   }
 
 }
@@ -5469,11 +5645,15 @@ final class EventNoticesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('banner', 'string', t('Banner'), default: '')
-      ->setSetting('multiline', TRUE)
-      ->addConstraint('Length', ['max' => 500]);
+    $inputs->add('banner', Schema::string()
+      ->title(t('Banner'))
+      ->default('')
+      ->maxLength(500)
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('show_banner', 'boolean', t('Show the banner'), default: FALSE);
+    $inputs->add('show_banner', Schema::bool()
+      ->title(t('Show the banner'))
+      ->default(FALSE));
   }
 
 }
@@ -5530,8 +5710,8 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/EventSetupResource.php`](src/Resource/EventSetupResource.php) | the resource of steps 1 and 2: stock keys in no group, which the flow splits | 28 |
-| [`modules/surface_examples/src/Resource/EventNoticesResource.php`](src/Resource/EventNoticesResource.php) | the resource of step 3: another resource, drawn whole | 14 |
+| [`modules/surface_examples/src/Resource/EventSetupResource.php`](src/Resource/EventSetupResource.php) | the resource of steps 1 and 2: stock keys in no group, which the flow splits | 40 |
+| [`modules/surface_examples/src/Resource/EventNoticesResource.php`](src/Resource/EventNoticesResource.php) | the resource of step 3: another resource, drawn whole | 18 |
 | [`modules/surface_examples/src/Storage/EventSetupStorage.php`](src/Storage/EventSetupStorage.php) | the setup's storage: names its config object | 3 |
 | [`modules/surface_examples/src/Storage/EventNoticesStorage.php`](src/Storage/EventNoticesStorage.php) | the notices' storage: names a config object of their own | 3 |
 | [`modules/surface_examples/src/Flow/EventSetupFlow.php`](src/Flow/EventSetupFlow.php) | the flow: its three steps, the keys each draws, its label and how long its stage lives, the condition on the third step and the check before Save | 26 |

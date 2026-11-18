@@ -32,7 +32,7 @@ final class DoorsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('opens', Schema::string()
+    $inputs->add('opens', Schema::string()
       ->title(t('Doors open at'))
       ->description(t('HH:MM, on a 24-hour clock.'))
       ->default('18:30')
@@ -42,7 +42,7 @@ final class DoorsResource implements ResourceInterface {
       ])
       ->ui(widget: 'time')
       ->required());
-    $inputs->addSchema('days', Schema::list(Schema::options([
+    $inputs->add('days', Schema::list(Schema::options([
       'fri' => t('Friday'),
       'sat' => t('Saturday'),
       'sun' => t('Sunday'),
@@ -51,7 +51,7 @@ final class DoorsResource implements ResourceInterface {
       ->default(['fri', 'sat'])
       ->required());
 
-    $inputs->addSchema('badges', Schema::options([
+    $inputs->add('badges', Schema::options([
       'printed' => t('Printed at the door'),
       'digital' => t('On the phone'),
       'none' => t('No badges'),
@@ -60,11 +60,11 @@ final class DoorsResource implements ResourceInterface {
       ->default('printed')
       ->ui(widget: 'radios'));
 
-    $inputs->addSchema('notes', Schema::string()
+    $inputs->add('notes', Schema::string()
       ->title(t('Notes for the door team'))
       ->ui(widget: 'textarea'));
 
-    $inputs->addSchema('greeters', Schema::list(Schema::string())
+    $inputs->add('greeters', Schema::list(Schema::string())
       ->title(t('Greeters'))
       ->default([]));
   }

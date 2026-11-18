@@ -22,9 +22,9 @@ final class PlaqueStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('caption', Schema::string()
+    $inputs->add('caption', Schema::string()
       ->title(t('Caption')));
-    $inputs->addSchema('credit', Schema::string()
+    $inputs->add('credit', Schema::string()
       ->title(t('Credit')));
   }
 

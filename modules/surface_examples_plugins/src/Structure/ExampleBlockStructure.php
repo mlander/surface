@@ -48,7 +48,7 @@ final class ExampleBlockStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $source = ArrangementGroup::fieldset('source', t('What to feature'));
 
-    $inputs->addSchema('headline', Schema::string()
+    $inputs->add('headline', Schema::string()
       ->title(t('Headline'))
       ->description(t('Shown above the featured content.'))
       ->default('Featured content')
@@ -57,7 +57,7 @@ final class ExampleBlockStructure implements StructureInterface {
       ->required());
     $inputs->describe('headline', placeholder: t('For example, Quarterly report'));
 
-    $inputs->addSchema('entity_type', Schema::string()
+    $inputs->add('entity_type', Schema::string()
       ->title(t('Entity type'))
       ->description(t('The type of content to feature.'))
       ->default('user')
@@ -68,17 +68,17 @@ final class ExampleBlockStructure implements StructureInterface {
       ->required());
     $inputs->describe('entity_type', group: $source);
 
-    $inputs->addSchema('bundle', Schema::string()
+    $inputs->add('bundle', Schema::string()
       ->title(t('Bundle'))
       ->description(t('Choose an entity type to see its bundles.')));
     $inputs->describe('bundle', group: $source);
 
-    $inputs->addSchema('field', Schema::string()
+    $inputs->add('field', Schema::string()
       ->title(t('Highlight field'))
       ->description(t('Choose a bundle to pick from its fields.')));
     $inputs->describe('field', group: $source);
 
-    $inputs->addSchema('limit', Schema::integer()
+    $inputs->add('limit', Schema::integer()
       ->title(t('Number of items'))
       ->description(t('How many items to feature.'))
       ->default(10)
@@ -87,7 +87,7 @@ final class ExampleBlockStructure implements StructureInterface {
       ->required());
     $inputs->describe('limit', weight: 10, suffix: t('items'));
 
-    $inputs->addSchema('presentation', Schema::string()
+    $inputs->add('presentation', Schema::string()
       ->title(t('Presentation'))
       ->description(t('How the items are laid out.'))
       ->default('list')

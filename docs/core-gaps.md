@@ -160,9 +160,10 @@ constraints into schema keywords", drafted, unfiled.
 shared contract, so code handed a definition to tighten has to name a
 class.
 
-**Here today.** Where the module tightens or rewords a definition it was
-handed, it checks the class first (`instanceof DataDefinition` in
-`Refinement\Rule::narrow()` and `ResourceBuild\BlueprintAdapterBase::describe()`).
+**Here today.** An author writes on no definition: a key is a schema
+handed to `add()`, and a refiner returns a schema of what its values
+add. A definition a host reader hands to `addDefinition()` is read into
+a schema at the call and not written to.
 
 **The core change.** A `MutableDataDefinitionInterface` (name open)
 declaring the setters the core definition classes share, without
@@ -188,11 +189,13 @@ contexts (`ContextDefinition::getDefaultValue()`) and config
 `default` and `examples` can never be filled from typed data, and a form
 has nothing to put in `#placeholder`.
 
-**Here today.** Both live on the definition, under the definition array
-keys the drafts propose, `default_value` and `examples`, written and read
-through one class that delegates to core's own method once one exists
+**Here today.** A key states both in its schema, `default()` and
+`examples()`. A definition a host reader hands to `addDefinition()`
+carries them under the definition array keys the drafts propose,
+`default_value` and `examples`, written and read through one class that
+delegates to core's own method once one exists
 (`src/DefinitionMetadata.php`). The emitter writes `default` and
-`examples` from them. A form draws no example as a placeholder: an
+`examples` from the key's schema. A form draws no example as a placeholder: an
 empty field showing a value reads as filled, so a placeholder is the
 key's declared arrangement (`describe($key, placeholder: ...)`).
 
@@ -355,7 +358,7 @@ keys:
 ```php
 $inputs->narrow('capacity')
   ->when(Condition::absent('license'))
-  ->constrain('Range', ['max' => 100]);
+  ->constrain(Schema::keywords(['maximum' => 100]));
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -667,9 +670,9 @@ their elements), but the form is still written by hand, and
 `ConfigFormBase::copyFormValuesToConfig()` is private.
 
 **Here today.** One generic form per operation, built from the
-definitions. A widget is chosen per definition from the definition
-alone, asked for with a setting where the definition does not settle it
-(`setSetting('widget', 'radios')`; [Widgets](widgets.md);
+keys. A widget is chosen per key from its schema alone, asked for with
+`ui(widget: 'radios')` where the schema does not settle it
+([Widgets](widgets.md);
 why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)). A key
 another depends on gets `#ajax`, and a change replaces only the
 elements that depend on it ([Wrapper ids and AJAX](forms.md#wrapper-ids-and-ajax)). Presentation (grouping, sizes, a

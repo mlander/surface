@@ -29,14 +29,14 @@ final class BoothStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('size', Schema::string()
+    $inputs->add('size', Schema::string()
       ->title(t('Size'))
       ->check('drupal:Choice', ['choices' => array_keys(self::MAX)]));
-    $inputs->addSchema('width', Schema::integer()
+    $inputs->add('width', Schema::integer()
       ->title(t('Width'))
       ->minimum(1)
       ->maximum(8));
-    $inputs->addSchema('depth', Schema::integer()
+    $inputs->add('depth', Schema::integer()
       ->title(t('Depth'))
       ->minimum(1)
       ->maximum(8));

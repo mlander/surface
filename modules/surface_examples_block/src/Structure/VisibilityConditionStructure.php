@@ -30,12 +30,12 @@ final class VisibilityConditionStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title(t('Condition'))
       ->description(t('The condition plugin.'))
       ->required());
 
-    $inputs->addSchema('negate', Schema::bool()
+    $inputs->add('negate', Schema::bool()
       ->title(t('Negate'))
       ->description(t('Whether the block is shown when the condition does not hold, rather than when it does.'))
       ->default(FALSE));

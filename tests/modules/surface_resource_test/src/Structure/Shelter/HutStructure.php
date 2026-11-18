@@ -27,7 +27,7 @@ final class HutStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('roof', Schema::string()
+    $inputs->add('roof', Schema::string()
       ->title(t('Roof'))
       ->required());
 

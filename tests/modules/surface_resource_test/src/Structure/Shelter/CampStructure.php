@@ -24,7 +24,7 @@ final class CampStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('site', Schema::string()
+    $inputs->add('site', Schema::string()
       ->title(t('Site'))
       ->required());
     $inputs->attachVariants('camp', by: 'site', label: t('Camp'), from: KitVariants::class, arguments: [

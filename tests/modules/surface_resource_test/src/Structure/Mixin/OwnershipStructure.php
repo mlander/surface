@@ -33,10 +33,10 @@ final class OwnershipStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('audience', Schema::string()->required());
-    $inputs->addSchema('owner', Schema::string()
+    $inputs->add('owner', Schema::string()
       ->title(t('Owner'))
       ->required());
-    $inputs->addSchema('shared', Schema::bool()
+    $inputs->add('shared', Schema::bool()
       ->title(t('Shared with editors'))
       ->default(FALSE));
     $inputs->narrow('owner')

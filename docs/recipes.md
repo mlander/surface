@@ -30,26 +30,30 @@ when you need it and not how.
 ## A time of day
 
 Core has no data type for a time of day, so a time is a string with a
-pattern, which asks the form for a time picker:
+pattern, which asks the form for a time picker. The pattern has a
+message of its own, so it is the `drupal:Regex` check; one with no
+message of its own is `pattern('^([01]\d|2[0-3]):[0-5]\d$')`:
 
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$inputs->add('opens', 'string', t('Opens at'), default: '09:00')
-  ->setRequired(TRUE)
-  ->setDescription(t('HH:MM, on a 24-hour clock.'))
-  ->setSetting('widget', 'time')
-  ->addConstraint('Regex', [
+$inputs->add('opens', Schema::string()
+  ->title(t('Opens at'))
+  ->description(t('HH:MM, on a 24-hour clock.'))
+  ->default('09:00')
+  ->check('drupal:Regex', [
     'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
     'message' => t('Write the time as HH:MM, such as 09:00.'),
-  ]);
+  ])
+  ->ui(widget: 'time')
+  ->required());
 ```
 
 The form draws the browser's time input, the served contract says
 `x-portable-ui.widget: "time"` and React draws the same; the browser posts
 `09:00`, and the pattern is still the rule, at every door
 ([Widgets](widgets.md#which-element-a-list-of-choices-is)). A date is the
-same with `setSetting('widget', 'date')` and RFC 3339's full-date
+same with `ui(widget: 'date')` and RFC 3339's full-date
 pattern, which both schemas also state as `format: date` (example 8's
 review date).
 
@@ -67,61 +71,64 @@ number, `1020` for 17:00, which is the price.
 ## An unconditional rule is a constraint
 
 "The library closes later than noon" holds whatever any other key holds,
-so it is no rule between keys: it is what the key allows, a constraint
-in `defineInputs()`:
+so it is no rule between keys: it is what the key allows, a rule in the
+key's schema in `defineInputs()`:
 
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$inputs->add('closes', 'integer', t('Closes at, in minutes after midnight'), default: 1020)
-  ->setRequired(TRUE)
-  ->setDescription(t('Later than noon: 1020 is 17:00.'))
-  ->addConstraint('Range', ['min' => 721, 'max' => 1439]);
+$inputs->add('closes', Schema::integer()
+  ->title(t('Closes at, in minutes after midnight'))
+  ->description(t('Later than noon: 1020 is 17:00.'))
+  ->default(1020)
+  ->minimum(721)
+  ->maximum(1439)
+  ->required());
 ```
 
 A declared rule is a condition and an effect. Written with no condition,
-`$inputs->narrow('closes')->constrain('Range', ['min' => 721])` is
+`$inputs->narrow('closes')->constrain(Schema::any()->minimum(721))` is
 refused when the resource is built ("... says no ->when(). A rule is a
 condition and at least one effect"), and the resource has no tool until
 it is fixed. Reach for `narrow()` only when another key's value decides.
 
 ## A multi-select
 
-A list whose item is a choice: the `LabeledChoice` goes on the item, and
-`addList()` declares the list around it, labeled, defaulted and required
-as `add()` declares any key. Up to twelve choices it is drawn as
+A list whose item is a choice: the item is `Schema::options()`, and
+`Schema::list()` declares the list around it, labeled, defaulted and
+required as any key is. Up to twelve choices it is drawn as
 checkboxes.
 
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$day = DataDefinition::create('string')
-  ->addConstraint('LabeledChoice', [
-    'choices' => [
-      'mon' => t('Monday'),
-      'tue' => t('Tuesday'),
-      'wed' => t('Wednesday'),
-      'thu' => t('Thursday'),
-      'fri' => t('Friday'),
-      'sat' => t('Saturday'),
-      'sun' => t('Sunday'),
-    ],
-  ]);
-$inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
-  ->setRequired(TRUE)
-  ->addConstraint('UniqueItems', []);
+$day = Schema::options([
+  'mon' => t('Monday'),
+  'tue' => t('Tuesday'),
+  'wed' => t('Wednesday'),
+  'thu' => t('Thursday'),
+  'fri' => t('Friday'),
+  'sat' => t('Saturday'),
+  'sun' => t('Sunday'),
+]);
+$inputs->add('days', Schema::list($day)
+  ->title(t('Days open'))
+  ->default(['mon', 'tue', 'wed', 'thu', 'fri'])
+  ->uniqueItems(TRUE)
+  ->required());
 ```
 
-`addList()` takes the item as a type name (`'string'`), a shape's class,
-or a definition, as here, when the item has constraints of its own, and
-returns the list for the rest of the core setters.
+`Schema::list()` takes the item's schema: a starting point
+(`Schema::string()`), a shape, or a schema kept in a variable, as here,
+since the after-hours days below take the same item. A `Schema` never
+changes once made, so two lists may share it.
 
 The form draws checkboxes, one per day, the served contract says
 `x-portable-ui.widget: "checkboxes"`, React draws its checkboxes, and the
 tool lists the days as the items' values. Every box unchecked is the
 empty list; boxes left as drawn keep the days. A list of more than
 twelve choices is a multiple select, and
-`setSetting('widget', 'checkboxes')` or `setSetting('widget', 'select')`
+`ui(widget: 'checkboxes')` or `ui(widget: 'select')`
 on the list asks for one or the other at any length
 ([Widgets](widgets.md#which-element-a-list-of-choices-is)). A day not on
 the list is refused by its position ("days.1: The value you selected is
@@ -136,13 +143,14 @@ is required on the form.
 
 ## A text area
 
-A string with core's `multiline` setting:
+A string drawn with the `textarea` widget:
 
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$inputs->add('notes', 'string', t('Notes'))
-  ->setSetting('multiline', TRUE);
+$inputs->add('notes', Schema::string()
+  ->title(t('Notes'))
+  ->ui(widget: 'textarea'));
 ```
 
 The string widget draws a `textarea`, with no `maxlength` and no
@@ -163,10 +171,14 @@ rule: it does not apply `unless()` after-hours access is on.
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$inputs->add('after_hours', 'boolean', t('After-hours access'), default: FALSE);
-$inputs->add('door_code', 'string', t('Door code'))
-  ->setRequired(TRUE)
-  ->addConstraint('Length', ['min' => 4, 'max' => 12]);
+$inputs->add('after_hours', Schema::bool()
+  ->title(t('After-hours access'))
+  ->default(FALSE));
+$inputs->add('door_code', Schema::string()
+  ->title(t('Door code'))
+  ->minLength(4)
+  ->maxLength(12)
+  ->required());
 $inputs->narrow('door_code')
   ->unless(Condition::equals('after_hours', TRUE))
   ->doesNotApply();
@@ -195,21 +207,24 @@ what a form posted without JavaScript keeps:
 **A list** is the case where required does not say what a reader
 means. Required means configured, and the empty list is a value, so a
 required list that applies is satisfied by no item at all: neither
-`setRequired()` nor a rule's `->require()` asks for one. "At least one
+`required()` nor a rule's `->require()` asks for one. "At least one
 day while after-hours access is on" is a `Count` with a minimum of 1,
-with its own message, in `defineInputs()` beside the same rule: the
+with its own message, so the `drupal:Count` check, in `defineInputs()`
+beside the same rule: the
 count is what the list allows wherever it applies, and a key that does
 not apply is never validated, so the condition stays the rule's alone.
 
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$inputs->addList('late_days', $day, t('After-hours days'), default: [])
-  ->setRequired(TRUE)
-  ->addConstraint('Count', [
+$inputs->add('late_days', Schema::list($day)
+  ->title(t('After-hours days'))
+  ->default([])
+  ->check('drupal:Count', [
     'min' => 1,
     'minMessage' => t('Choose at least one day for after-hours access.'),
-  ]);
+  ])
+  ->required());
 $inputs->narrow('late_days')
   ->unless(Condition::equals('after_hours', TRUE))
   ->doesNotApply();
@@ -219,7 +234,7 @@ With after-hours access on and no day checked, every door refuses it
 ("Choose at least one day for after-hours access."), and the full
 schema says `minItems: 1`. A list that always applies, and needs an item only
 while another key holds a value, takes the count in the rule instead,
-`->constrain('Count', ['min' => 1, 'message' => t('...')])` after its
+`->constrain(Schema::any()->check('drupal:Count', ['min' => 1, 'minMessage' => t('...')]))` after its
 `->when()` ([Declaring a rule](refinement.md#declaring-a-rule)); its
 refusal is the rule's message, with the condition after it, or core's
 sentence when the rule gives none.
@@ -239,16 +254,18 @@ A list whose item is a plain string, such as keywords, is a list to the
 tool, both schemas and React, and on the form too: the stock list widget
 draws it as rows, one text field per keyword, with "Remove" beside each
 and "Add another" under them, each rebuilding the list over AJAX. Nothing
-to declare but the list, its item a type name:
+to declare but the list, its item a plain string:
 
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$inputs->addList('keywords', 'string', t('Keywords'), default: []);
+$inputs->add('keywords', Schema::list(Schema::string())
+  ->title(t('Keywords'))
+  ->default([]));
 ```
 
 A row left empty is dropped, as the pipeline drops an empty item; what a
-keyword may be (a `Length`, a `Regex` on the item definition) reaches
+keyword may be (a `maxLength()`, a `pattern()` on the item's schema) reaches
 each row's field, and a refused keyword is marked on its own row. The
 served contract says `x-portable-ui.widget: "list"`. A text area of one
 keyword per line, or a comma separated list, is still a widget of your
@@ -266,12 +283,17 @@ a bench per bench its configuration lists:
 
 ```php
 $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));
-$inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, label: t('Lights'), default: FALSE)
-  ->setDescription(t('Which benches have their lamp on.'));
-$inputs->addEach('codes', Sku::class, from: WorkshopBenches::class, label: t('Bench codes'));
+$inputs->addEach(
+  'lights',
+  Schema::bool()->default(FALSE),
+  from: WorkshopBenches::class,
+  label: t('Lights'),
+  description: t('Which benches have their lamp on.'),
+);
+$inputs->addEach('codes', Schema::of(Sku::class), from: WorkshopBenches::class, label: t('Bench codes'));
 ```
 
-`addEach()` is one value per thing, of a type or a shape, and requires
+`addEach()` is one value per thing, with a schema as `add()` takes, and requires
 a label, since its values have none to borrow; `attachEach()` is one
 structure per thing, its label optional, the structure's own when it is
 left out. The provider is a class of its own, never
@@ -311,7 +333,12 @@ translate. The alias settings ask for their types so:
 <!-- excerpt: tests/modules/surface_schema_test/src/Resource/AliasSettingsResource.php -->
 
 ```php
-$inputs->addEach('types', 'boolean', from: AliasTypes::class, label: t('Types with aliases'), default: FALSE);
+$inputs->addEach(
+  'types',
+  Schema::bool()->default(FALSE),
+  from: AliasTypes::class,
+  label: t('Types with aliases'),
+);
 ```
 
 The translation is a layout, a `StorageLayoutInterface` with two
@@ -383,7 +410,7 @@ Three more things hold for a translated key:
 - **An id the list leaves out reads as its entry's default**, as any
   entry a stored map leaves out does
   ([Keys that come from the site](resources.md#keys-that-come-from-the-site)).
-  Give the entries `default: FALSE`, so a type left out reads unchecked.
+  Give the entries `default(FALSE)`, so a type left out reads unchecked.
   An entry that starts checked reads checked whatever the list says,
   which suits only an entry that is also locked, as pathauto's types
   whose path field another module provides are.
@@ -408,20 +435,27 @@ the thing exists. It is two keys. Example 15's venue declares them:
 <!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
-$inputs->add('label', 'string', t('Name'))
-  ->setRequired(TRUE)
-  ->addConstraint('Length', ['max' => 128]);
+$inputs->add('label', Schema::string()
+  ->title(t('Name'))
+  ->maxLength(128)
+  ->required());
 
-$inputs->compute('id', 'machine_name', t('Machine name'),
-  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
-  ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-  ->addConstraint('Length', ['max' => 32]);
+$inputs->compute(
+  'id',
+  Schema::of('drupal:config/machine_name')
+    ->title(t('Machine name'))
+    ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+    ->check('drupal:Length', ['max' => 32]),
+  from: ['label'],
+  using: MachineName::class,
+  when: Compute::UNLESS_SENT,
+);
 ```
 
 `id` is the resource's identity, `#[Resource(identity: ['id'])]`, and its
 storage a `ConfigEntityStorage`. That is all it takes:
 
-- `machine_name` is core's config schema type: the pattern
+- `Schema::of('drupal:config/machine_name')` names core's config schema type: the pattern
   `^[a-z0-9_]+$` and a Length of 166, both stated in the schema, which
   the key narrows to 32.
 - A call that leaves `id` out gets one computed from the name by the

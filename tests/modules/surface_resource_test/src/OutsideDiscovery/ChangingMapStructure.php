@@ -30,7 +30,7 @@ final class ChangingMapStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addMap('kit', 'Kit', static function (BlueprintInterface $kit): void {
-      $kit->addSchema(self::$runs++ === 0 ? 'tent' : 'awning', Schema::bool()
+      $kit->add(self::$runs++ === 0 ? 'tent' : 'awning', Schema::bool()
         ->title('Cover'));
       $kit->attach('bench', BenchStructure::class);
     });

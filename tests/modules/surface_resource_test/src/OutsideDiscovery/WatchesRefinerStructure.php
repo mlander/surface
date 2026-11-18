@@ -20,9 +20,9 @@ final class WatchesRefinerStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('first', Schema::string()
+    $inputs->add('first', Schema::string()
       ->title('First'));
-    $inputs->addSchema('third', Schema::string()
+    $inputs->add('third', Schema::string()
       ->title('Third'));
   }
 

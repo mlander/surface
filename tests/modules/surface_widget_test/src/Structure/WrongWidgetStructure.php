@@ -22,7 +22,7 @@ final class WrongWidgetStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('word', Schema::string()
+    $inputs->add('word', Schema::string()
       ->title(t('Word'))
       ->ui(widget: 'no_such_widget'));
   }

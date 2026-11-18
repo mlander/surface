@@ -47,17 +47,17 @@ final class ChainBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('tier_one', Schema::string()
+    $inputs->add('tier_one', Schema::string()
       ->title(t('Tier one'))
       ->default('a')
       ->check('drupal:Choice', ['choices' => array_keys(self::SECOND)]));
-    $inputs->addSchema('tier_two', Schema::string()
+    $inputs->add('tier_two', Schema::string()
       ->title(t('Tier two')));
-    $inputs->addSchema('tier_three', Schema::string()
+    $inputs->add('tier_three', Schema::string()
       ->title(t('Tier three')));
     // A key that refines against nothing, so that a rebuild can be seen
     // to leave the rest of the form alone.
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note'))
       ->default('stored note'));
   }

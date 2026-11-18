@@ -139,7 +139,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
    *
    * Each way one could be declared, refused at seal at the latest: the
    * builder's own, setSecret() on the definition a blueprint's add()
-   * returns, and addSchema() with `writeOnly`, at the top and in a map.
+   * returns, and add() with `writeOnly`, at the top and in a map.
    */
   public function testSecretOutputIsRefused(): void {
     $typed = $this->container->get('typed_data_manager');
@@ -155,7 +155,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
         DefinitionMetadata::setSecret((new ResourceBlueprint($builder, $typed, TRUE))->add('added', 'string', 'Token'));
       },
       'schema' => static function (SurfaceBuilder $builder) use ($typed): void {
-        (new ResourceBlueprint($builder, $typed, TRUE))->addSchema('schema', Schema::string()->title('Token')->writeOnly(TRUE));
+        (new ResourceBlueprint($builder, $typed, TRUE))->add('schema', Schema::string()->title('Token')->writeOnly(TRUE));
       },
     ];
     foreach ($ways as $at => $declare) {

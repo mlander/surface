@@ -44,17 +44,17 @@ final class ReferencingEntityResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title('Id')
       ->required());
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title('Label')
       ->check('drupal:Regex', ['pattern' => '/([^\PC])/u', 'match' => FALSE])
       ->required());
-    $inputs->addSchema('page', Schema::integer()
+    $inputs->add('page', Schema::integer()
       ->title('Page')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node']));
-    $inputs->addSchema('role', Schema::string()
+    $inputs->add('role', Schema::string()
       ->title('Role')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user_role']));
   }

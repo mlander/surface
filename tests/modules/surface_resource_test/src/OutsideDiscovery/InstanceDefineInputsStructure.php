@@ -27,7 +27,7 @@ final class InstanceDefineInputsStructure {
    *   The input blueprint to fill.
    */
   public function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title('Name'));
   }
 

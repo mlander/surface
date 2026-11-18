@@ -27,11 +27,11 @@ final class SecretFieldSettingsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('endpoint', Schema::string()
+    $inputs->add('endpoint', Schema::string()
       ->title(t('Endpoint'))
       ->description(t('Where this field sends its values.'))
       ->default(''));
-    $inputs->addSchema('token', Schema::string()
+    $inputs->add('token', Schema::string()
       ->title(t('API key'))
       ->description(t('The key this field authenticates with.'))
       ->default('')

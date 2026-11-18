@@ -20,7 +20,7 @@ final class MountingMixinAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('color', Schema::string()
+    $inputs->add('color', Schema::string()
       ->title('Color'));
   }
 

@@ -52,79 +52,79 @@ the source of every list; the provider only reads what the resolvers
 answer (why: [decision](decisions.md#our-options-answer-cores-question)).
 The select widget reads its `#options` this way.
 
-## LabeledChoice
+## A labeled list of values
 
-`LabeledChoice` is a `Choice` subclass. Because it *is* a `Choice`, every
-`Choice`-aware consumer already sees it (core's own `Choice` reading, a
-schema emitter, a form builder), and the upstream ask becomes "labels on
-`Choice`" rather than a second constraint. Its validator is
-`ChoiceValidator`, named rather than subclassed, so what it accepts is
-exactly what `Choice` accepts, down to the comparison. Labels and
-descriptions play no part in validation.
+A key whose value is one of a fixed list, each value with a label, is
+`Schema::options()`: an array of value to label, the values' type after
+it. The module checks it with `LabeledChoice`, its own `Choice`
+subclass, so every `Choice`-aware consumer already sees it (core's own
+`Choice` reading, a schema emitter, a form builder), and the upstream
+ask is "labels on `Choice`" rather than a second constraint. Its
+validator is `ChoiceValidator`, named rather than subclassed, so what it
+accepts is exactly what `Choice` accepts, down to the comparison.
+Labels and descriptions play no part in validation.
 
 Nothing in it knows about resources, structures, widgets or resolvers.
 The resolver layer reads the constraint; the constraint never reads the
 resolver.
 
-### Three ways to write it
+### How to write one
 
-Which one is meant is decided by which of `choices` and `labels` are
-given. All three allow the same values and offer the same labels.
-
-**`labels` alone** is the one to reach for whenever the values carry
-meaning: the keys of `labels` are the allowed values. It is the spelling
-for integer values. An integer-keyed map in `choices` reads as a list of
-values to `Choice` and to a person reading the declaration, so an integer
-value's meaning goes in `labels`:
+**String values** are the array's keys, each mapped to its label:
 
 ```php
-$definition->addConstraint('LabeledChoice', [
-  'labels' => [
-    0 => t('Disabled'),
-    1 => t('Optional'),
-    2 => t('Required'),
-  ],
-  'descriptions' => [2 => t('Every request has to carry one.')],
-]);
+$inputs->add('badge', Schema::options([
+  'star' => t('Star'),
+  'flame' => t('Flame'),
+])
+  ->title(t('Badge')));
 ```
 
-**`choices` as a map** is the same thing for string values, where no key
-can be mistaken for a position: `choices` on its own is read as
-`value => label`.
+**Integer values** are written the same way, with `type('integer')`.
+The keys are always the values, so an integer key is never read as a
+position:
 
 ```php
-$definition->addConstraint('LabeledChoice', [
-  'choices' => ['star' => t('Star'), 'flame' => t('Flame')],
-]);
+$inputs->add('captcha', Schema::options([
+  0 => t('Disabled'),
+  1 => t('Optional'),
+  2 => t('Required'),
+])
+  ->type('integer')
+  ->title(t('Captcha')));
 ```
 
-**`choices` as a list with `labels` beside it** is `Choice`'s own form,
-for a label set that covers only some of the values. It is also the
-form the module writes back after narrowing or extending a list, and the
-form for values that are numeric strings, which PHP would key as
-integers (`'1'` as `1`): the resource generator writes `labels` alone
-otherwise ([Generating](generating.md#keys-from-a-json-schema-document)).
+**Values with no labels** are `Schema::enum([...])`, which the module
+checks with core's `Choice`.
+
+**A label set that covers only some values**, values that are numeric
+strings, which PHP would key as integers (`'1'` as `1`), and a value
+with a description of its own are the check form, with the
+constraint's own options: `choices`, the list of values, `labels`, a
+label for some of them, `descriptions`, a description for some of them.
+A value with no label of its own is named by its value. It is also the
+form the module writes back after narrowing or extending a list, and
+the form the resource generator writes for numeric strings
+([Generating](generating.md#keys-from-a-json-schema-document)):
 
 ```php
-$definition->addConstraint('LabeledChoice', [
-  'choices' => ['star', 'flame', 'sash'],
-  'labels' => ['star' => t('Star')],
-]);
+$inputs->add('sash', Schema::string()
+  ->title(t('Ribbon'))
+  ->check('drupal:LabeledChoice', [
+    'choices' => ['star', 'flame', 'sash'],
+    'labels' => ['star' => t('Star')],
+    'descriptions' => ['sash' => t('Worn across the shoulder.')],
+  ]));
 ```
 
-A bare list of values with no meaning attached is core's `Choice`, not
-this constraint, so `choices` alone is never read as one. Both `labels`
-and `descriptions` may be partial in the third form: a value with no
-label of its own is named by its value.
-
-The three spellings are one declaration to every consumer: the resolver
+The spellings are one declaration to every consumer: the resolver
 answers with the same `OptionSet`, the narrowing check gives the same
 verdict, and a contribution merges into any of them identically:
 `ChoiceSpellingParityTest` is where that is held to.
 
 ### One vocabulary, declared once
 
-The map spelling already keeps a declaration from naming a value twice.
+The array already keeps a declaration from naming a value twice.
 When the *code* names the values too (a `match` on a stored setting, a
 lookup of what each value offers), a backed enum keeps the whole
 vocabulary in one place. Core's `NodePreviewMode` is the precedent:
@@ -142,12 +142,14 @@ enum ExampleVariant: string {
   public function label(): TranslatableMarkup {
     return match ($this) {
       self::Bold => t('Bold'),
-      // ...
+      self::Strong => t('Strong'),
+      self::Quiet => t('Quiet'),
+      self::Muted => t('Muted'),
     };
   }
 
   /**
-   * The value-to-label map the short spelling takes.
+   * The value-to-label map Schema::options() takes.
    */
   public static function choices(): array {
     $choices = [];
@@ -164,12 +166,13 @@ The structure consumes the projection, and no value is spelled out
 twice anywhere:
 
 ```php
-$inputs->add('variant', 'string', t('Variant'))
-  ->addConstraint('LabeledChoice', ['choices' => ExampleVariant::choices()]);
+$inputs->add('variant', Schema::options(ExampleVariant::choices())
+  ->title(t('Variant'))
+  ->description(t('The variants the chosen casing offers.')));
 ```
 
-**An enum is not a fence around the key.** What the key allows is the
-constraint, and an alter widens it at build time with
+**An enum is not a fence around the key.** What the key allows is its
+schema, and an alter widens it at build time with
 `extendChoices()`: `surface_examples_extras` contributes `ribbon`, which
 is deliberately not a case in the example's enum. A contributor answers for
 its own value, and the owner's enum is not where that value lives: that
@@ -178,16 +181,24 @@ string it was handed rather than `ExampleVariant::from()`-ing it, and only
 the owner's own half of the vocabulary is enumerated. An enum used as a
 gate turns every contribution into a fatal.
 
-**When the plain map is enough.** Most vocabularies are named once, in
-the declaration, and read back only as options. Those want the map
-spelling and nothing else; an enum whose only caller is the declaration
-buys a class for no reader. Reach for the enum when the values are also
+**When the plain array is enough.** Most vocabularies are named once, in
+the declaration, and read back only as options. Those want the array
+and nothing else; an enum whose only caller is the declaration buys a
+class for no reader. Reach for the enum when the values are also
 matched on in code. And when the values are integers, the enum's
-`asOptions()` is the whole of the `labels` spelling:
+`asOptions()` is the whole of the array:
 
 ```php
-->addConstraint('LabeledChoice', ['labels' => NodePreviewMode::asOptions()]);
+Schema::options(NodePreviewMode::asOptions())->type('integer')
 ```
+
+### Reading the list a key offers
+
+A refiner that reads the values a key offers, with their labels, reads
+them through `ChoiceSet::of($key)`, handed the key's schema: its
+`values` in the key's order and its `labels` by value, or `NULL` for a
+key with no list. Whichever spelling declared the list, `ChoiceSet`
+reads it ([What an answer says](refinement.md#what-an-answer-says)).
 
 ## The resolver plugin type
 
@@ -207,15 +218,16 @@ public function resolve(Constraint $constraint, Schema $schema): OptionSet;
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Nothing about resources or structures appears in either signature: a
-resolver is handed a constraint and the schema of the key it was declared
-on, and answers with an `OptionSet`: allowed values as keys mapped to
-their labels, optional per-value descriptions, and a `CacheableMetadata`
-saying how long the answer may be reused. What the schema promises is its
-standard keywords, read with `get()`: `$schema->get('title')`, its type,
-its bounds. What Surface keeps on a schema beyond them is not promised.
-No stock resolver reads the schema. Where the caller holds the key's schema
-it is handed on; otherwise it is read from the definition when a
-resolver is about to be called
+resolver is handed a constraint and the schema of the key it was
+declared on, and answers with an `OptionSet`: allowed values as keys
+mapped to their labels, optional per-value descriptions, and a
+`CacheableMetadata` saying how long the answer may be reused. What the
+schema promises is its standard keywords, read with `get()`:
+`$schema->get('title')`, its type, its bounds. What Surface keeps on a
+schema beyond them is not promised. No stock resolver reads the
+schema. Where the caller holds the key's schema it is handed on;
+otherwise it is read from the definition when a resolver is about to
+be called
 (why: [decision](decisions.md#nothing-asks-for-a-definition-it-does-not-need)).
 
 `SurfaceOptionsResolverBase` answers `applies()` from the declared
@@ -229,14 +241,14 @@ resolver did not exist.
 
 `surface.options` (`Options\SurfaceOptions`) is what consumers
 call. `resolve(Schema|DataDefinitionInterface $key): ?OptionSet` takes
-the key: its schema, or its definition where the caller holds no schema. It
-walks the key's constraints, asks each resolver, and answers with the
-list, or `NULL` when no constraint on the key names one. Handed a schema,
-the constraints are the schema's (`SchemaFacts::constraints()`) and each
-resolver is handed that schema. Handed a definition (core's options
-provider, a widget's claim, the form's extraction), the constraints are
-the definition's, and the schema is read from it when a resolver first
-reads it.
+the key: its schema, or its definition where the caller holds no
+schema. It walks the key's constraints, asks each resolver, and answers
+with the list, or `NULL` when no constraint on the key names one.
+Handed a schema, the constraints are the schema's
+(`SchemaFacts::constraints()`) and each resolver is handed that schema.
+Handed a definition (core's options provider, a widget's claim, the
+form's extraction), the constraints are the definition's, and the
+schema is read from it when a resolver first reads it.
 
 When more than one constraint resolves, the answer is their
 **intersection**, because every constraint on a definition has to hold at
@@ -281,26 +293,27 @@ third spelling an entity type select reads as machine names.
 
 ## Which constraint to write
 
-A rule on a key is said by a constraint. Take the first of three steps
+A rule on a key is said in its schema. Take the first of three steps
 that can say it: each step down tells a client less before it calls
 (why: [decision](decisions.md#a-rule-is-a-keyword-first-a-list-second-code-last)).
 
-**1. A stock constraint with data options.** `Range`, `Length`,
-`Count`, `UniqueItems`, `NotBlank`, `Regex`, `Email`, `Choice` and
-`LabeledChoice` are the constraints `ContractEmitter` writes as JSON
-Schema keywords (`minimum`, `maxLength`, `minItems`, `uniqueItems`,
-`pattern`, `format`, `oneOf`). The
-schema reader turns those keywords back into the same constraints, the
+**1. A keyword.** `minimum()`, `maxLength()`, `minItems()`,
+`uniqueItems()`, `pattern()`, `format()`, `Schema::options()` and
+`Schema::enum()` are JSON Schema keywords, which the module checks with
+`Range`, `Length`, `Count`, `UniqueItems`, `Regex`, `Email`,
+`LabeledChoice` and `Choice`, and `ContractEmitter` writes back as the
+same keywords. The schema reader turns those keywords back into the
+same constraints, the
 React page narrows on them with no request, and a tool caller reads them
 in the listing before it calls. JSON Schema has a closed set of
 keywords, and a generic validator ignores any other. A constraint the
 emitter has no keyword for is in the same place: a client can read its
 name, and nothing it can check. Keep
-`LabeledChoice` for a vocabulary that is literal, such as
+`Schema::options()` for a vocabulary that is literal, such as
 hidden/optional/required.
 
 `UniqueItems` is a constraint this module adds because core has none.
-Put it on a list whose items must differ; both documents state it as
+`uniqueItems(TRUE)` puts it on a list whose items must differ; both documents state it as
 `uniqueItems: true`, and a list that repeats an item is refused on the
 list, naming the first item repeated. It is Symfony's `Unique`,
 registered the way core registers `Count`, and compares items strictly.
@@ -310,11 +323,12 @@ declaration order, so on the accepted list that is the comparison
 
 **2. A list the site decides: name the kind, and a resolver lists it.**
 When the allowed values are "every one of a kind that this site has",
-say which kind: `PluginExists`, `EntityBundleExists`, `LanguageExists`
-or the address module's `Country`, each read by a [stock
-resolver](#the-stock-resolvers), or `SurfaceValidReference` for an entity's id
-([below](#a-key-that-refers-to-an-entity)). There is no
-code per resource: the constraint names the kind, the resolver lists
+say which kind with a named check: `drupal:PluginExists`,
+`drupal:EntityBundleExists`, `drupal:LanguageExists` or the address
+module's `drupal:Country`, each read by a [stock
+resolver](#the-stock-resolvers), or `drupal:SurfaceValidReference` for
+an entity's id ([below](#a-key-that-refers-to-an-entity)). There is no
+code per resource: the check names the kind, the resolver lists
 it for the site, and both documents state the list as a `oneOf` while it
 is short. Past its budget a reference is looked up and a list of
 variants or keys from the site is `deferred`
@@ -326,13 +340,13 @@ example 2 does for the rooms of the site's venues (`EventVenueRoom`),
 and `surface_examples_keys` for the keys the site manages
 (`ManagedKey`).
 
-The address port shows why this beats a `LabeledChoice` whose choices
-are assembled at build time. Its countries and languages started as
+The address port shows why this beats a `Schema::options()` list
+assembled at build time. Its countries and languages started as
 labeled choices filled from the country repository and the language
-manager, and the cost was not the code: **a definition that cannot be
+manager, and the cost was not the code: **a key that cannot be
 written down without services cannot sit in a resource or structure
 class**, which holds no service. Said as the `Country` and
-`LanguageExists` constraints instead, the definitions became literal
+`LanguageExists` checks instead, the keys became literal
 enough to sit in `AddressFieldSettingsResource`, readable without
 instantiating anything, and the live lookup moved to the one place that
 already answers for freshness.
@@ -346,7 +360,7 @@ as the permission option, a placeholder message), for the same reason
 `LabeledChoice` is.
 
 **3. A constraint of your own, last.** Only for a rule no keyword and no
-list can state: a comparison between two keys, uniqueness against what
+list can state, named with `check('drupal:<id>', [...])`: a comparison between two keys, uniqueness against what
 is stored, a check of site state with a reason of its own. One such rule
 needs none: a create's identity held once across what is stored is the
 stock `SurfaceUnique`, which the build adds where the storage can
@@ -367,7 +381,7 @@ rooms as a `oneOf` and name nothing under `portable-check`.
 **Example 2, before and after.** Its venue was a string with a
 constraint of its own, a `Choice` subclass, a validator that read the
 enabled venues and a resolver that listed them. It is now
-a string with `SurfaceValidReference` naming `event_venue`, step 2 with no code:
+a string with a `drupal:SurfaceValidReference` check naming `event_venue`, step 2 with no code:
 its candidates are core's selection handler's, and both documents state
 it as its check's options, `{"entityTypeId": "event_venue"}`. The room keeps what no stock constraint
 says, a room of one of the site's venues: one constraint with its
@@ -378,21 +392,24 @@ venue chosen
 ## A key that refers to an entity
 
 A key that refers to an entity holds the entity's id: a key of the id's
-type with the `SurfaceValidReference` constraint naming the entity type
+type with a `drupal:SurfaceValidReference` check naming the entity type
 it refers to
 (why: [decision](decisions.md#a-reference-is-a-constraint-on-a-value),
 [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
 
 ```php
 // A venue's machine name.
-$inputs->add('venue', 'string', t('Venue'))
-  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue']);
+$inputs->add('venue', Schema::string()
+  ->title(t('Venue'))
+  ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue']));
 
 // A user's id.
-$inputs->add('contact', 'integer', t('Contact'))
-  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user']);
-$inputs->add('page', 'integer', t('Announcement'))
-  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]);
+$inputs->add('contact', Schema::integer()
+  ->title(t('Contact'))
+  ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
+$inputs->add('page', Schema::integer()
+  ->title(t('Announcement'))
+  ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
 
 // Content of any type: a structure the example declares.
 $inputs->attach('thing', ThingStructure::class);
@@ -408,17 +425,17 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   The build refuses a constraint naming an entity type the site does
   not have, and a key of another type than the entity type's id, naming
   the right one; a bundle it does not have yet is no refusal, and the
-  key offers nothing until it has. `add($key, 'entity:node')` is
-  refused, naming the constraint: an entity is no type a key holds; its
+  key offers nothing until it has. `Schema::of('entity:node')` is
+  refused, naming the check: an entity is no type a key holds; its
   id is.
 - **Any entity type** is a structure of two keys, attached at the key:
   `entity_type`, which lists the entity types the account may reference
   one of, by `SurfaceReferenceableType` with its `interface`
   (`ContentEntityInterface` or `ConfigEntityInterface`) and `targets`,
   each entity type allowed with its bundles (`['node' => ['article'],
-  'user' => []]`), and `id`, a string with the setting
-  `References::TARGETS`, which a static refiner of the structure
-  narrows to the entity type chosen with `SurfaceValidReference`. So
+  'user' => []]`), and `id`, a string that names the same targets,
+  which a static refiner of the structure narrows to the entity type
+  chosen with a `drupal:SurfaceValidReference` check. So
   both kinds are one mechanism, and the full schema states the id once
   per entity type, as a conditional. The id does not apply while no
   entity type is chosen, and is required once one is. Stored as
@@ -427,12 +444,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `surface_examples_references`, each naming its entity types in its own
   declaration ([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
 - **One per thing the site has**, `addEach('pages',
-  DataDefinition::create('integer')->addConstraint('SurfaceValidReference',
+  Schema::integer()->check('drupal:SurfaceValidReference',
   ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class,
   label: t('Pages'))`: a map of keys from the site whose every entry is
-  such an id, the definition copied for every entry and checked as any
-  reference key is; `addEach($key, 'entity:node', from: ..., label: ...)`
-  is refused, as `add()` refuses it.
+  such an id, the schema used for every entry and checked as any
+  reference key is.
 - **A reference field's `target_id`.** The content entity example
   builds a reference field's target id as such a key, naming the
   field's selection handler and its settings
@@ -447,7 +463,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   machine name. Every door still sends and answers the id; only the
   stored config holds the uuid, typed `uuid` in its schema. A config
   entity also depends on what its keys refer to. A key keeps the id
-  with `->setSetting(References::STORED_AS, References::BY_ID)`
+  with `->annotation('x-surface-settings', [References::STORED_AS => References::BY_ID])`
   ([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)).
 
 The candidates are core's entity reference selection handler's: the

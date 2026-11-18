@@ -25,19 +25,19 @@ final class ThresholdStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('mode', Schema::options([
+    $inputs->add('mode', Schema::options([
       'at_least' => t('At least'),
       'at_most' => t('At most'),
     ])
       ->title(t('Comparison'))
       ->default('at_least'));
-    $inputs->addSchema('threshold', Schema::integer()
+    $inputs->add('threshold', Schema::integer()
       ->title(t('Threshold'))
       ->description(t('The number the reading is compared against.'))
       ->default(10)
       ->minimum(0)
       ->maximum(100));
-    $inputs->addSchema('reading', Schema::integer()
+    $inputs->add('reading', Schema::integer()
       ->title(t('Reading'))
       ->description(t('The number the plugin tests.'))
       ->default(0)

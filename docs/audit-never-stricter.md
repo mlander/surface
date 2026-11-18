@@ -363,7 +363,7 @@ the list is narrower than the validator:
 | `Country` | the address module's list | not read: the address module is not in the suite | not verified |
 
 ```php
-DataDefinition::create('string')->addConstraint('PluginExists', [
+Schema::string()->check('drupal:PluginExists', [
   'manager' => 'plugin.manager.block', 'allowFallback' => TRUE,
 ]);
 // 'no_such_block': the pipeline accepts it; the full schema's oneOf refuses it.

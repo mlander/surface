@@ -29,14 +29,14 @@ final class PersonStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('listed', Schema::bool());
 
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->required());
 
-    $inputs->addSchema('email', Schema::string()->format('email')
+    $inputs->add('email', Schema::string()->format('email')
       ->title(t('Email')));
 
-    $inputs->addSchema('phone', Schema::of(PhoneNumber::class)
+    $inputs->add('phone', Schema::of(PhoneNumber::class)
       ->title(t('Phone')));
 
     $inputs->narrow('email')

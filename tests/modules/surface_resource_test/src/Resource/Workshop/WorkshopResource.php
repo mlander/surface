@@ -39,7 +39,7 @@ final class WorkshopResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('closed', Schema::bool()
+    $inputs->add('closed', Schema::bool()
       ->title(t('Closed'))
       ->default(FALSE));
     $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));

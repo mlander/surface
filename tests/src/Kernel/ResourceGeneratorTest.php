@@ -20,7 +20,7 @@ use Symfony\Component\Filesystem\Filesystem;
  * - The newsletter's answers write "Your first resource"'s module byte for
  *   byte: what the page quotes is what the generator writes, and the page
  *   stays the truth this holds the generator to. The resource's keys are
- *   the one difference: the page states them with addSchema(), and the
+ *   the one difference: the page states them with add(), and the
  *   generator writes them with add(), the same definitions, so the schema
  *   entry and install file written from the class agree with the page's.
  * - A routing or permissions file that is there keeps every entry; the
@@ -119,7 +119,7 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
    */
   public function testTheNewsletterIsTheFirstPage(): void {
     $display = $this->generate(self::NEWSLETTER);
-    // The class, but for its keys: the page's addSchema() calls, the
+    // The class, but for its keys: the page's add() calls, the
     // generator's add() calls.
     // Decision: see docs/decisions.md#authoring-takes-a-schema.
     $this->assertSame(self::withoutKeys((string) file_get_contents(self::FIRST . '/src/Resource/NewsletterResource.php')), self::withoutKeys($this->written('src/Resource/NewsletterResource.php')), 'src/Resource/NewsletterResource.php differs from the shipped module beside its keys.');

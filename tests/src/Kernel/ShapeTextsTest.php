@@ -306,21 +306,21 @@ class ShapeTextsTest extends SurfaceKernelTestBase {
     $this->in('en');
     $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase only.'], Shapes::unaltered(CheckMessageShape::class)->getConstraints()['Regex']);
     $builder = new SurfaceBuilder();
-    (new ResourceBlueprint($builder, $this->container->get('typed_data_manager')))->addSchema('code', Schema::string()
+    (new ResourceBlueprint($builder, $this->container->get('typed_data_manager')))->add('code', Schema::string()
       ->check('drupal:Regex', ['pattern' => '/^[a-z]+$/'])
       ->message('check.drupal:Regex', TextsMade::t('Lowercase only.')));
-    $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase only.'], $builder->seal()->getDefinition('code')->getConstraints()['Regex'], 'And so does an addSchema() key.');
+    $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase only.'], $builder->seal()->getDefinition('code')->getConstraints()['Regex'], 'And so does an add() key.');
   }
 
   /**
-   * Tests an addSchema() key's texts stay its author's, in either language.
+   * Tests an add() key's texts stay its author's, in either language.
    */
   public function testAnAddedSchemaKeepsItsTexts(): void {
     foreach ([['xx', 'en'], ['en', 'xx']] as [$read, $served]) {
       TextsMade::forget();
       $this->in($read);
       $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
-      $blueprint->addSchema('letter', Schema::options(['a' => TextsMade::t('Ay'), 'b' => TextsMade::t('Bee')])
+      $blueprint->add('letter', Schema::options(['a' => TextsMade::t('Ay'), 'b' => TextsMade::t('Bee')])
         ->type('string')
         ->title(TextsMade::t('Name'))
         ->description(TextsMade::t('Your name'))

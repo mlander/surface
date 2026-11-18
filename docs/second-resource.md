@@ -2,8 +2,8 @@
 
 A rule between keys makes what one key allows depend on another key's
 value. When that answer has to be computed, you write it as a refiner:
-a static method that takes the key's definition and the values of the
-keys it watches, and returns a narrower definition.
+a static method that takes the values of the keys it watches and
+returns a schema of what those values add to the key.
 [Rules between keys](introduction/07-rules-between-keys.md) introduces
 both, and the rules you can declare without a method.
 
@@ -92,13 +92,13 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_first\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_first\Storage\StoreStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * The store location: a region is one of the chosen country's.
@@ -121,20 +121,18 @@ final class StoreResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::COUNTRY, 'string', t('Country'), default: 'CA')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'CA' => t('Canada'),
-          'US' => t('United States'),
-        ],
-      ]);
+    $inputs->add(self::COUNTRY, Schema::options([
+      'CA' => t('Canada'),
+      'US' => t('United States'),
+    ])
+      ->title(t('Country'))
+      ->default('CA')
+      ->required());
 
-    $inputs->add(self::REGION, 'string', t('Region'), default: 'CA-ON')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => self::regions('CA') + self::regions('US'),
-      ]);
+    $inputs->add(self::REGION, Schema::options(self::regions('CA') + self::regions('US'))->type('string')
+      ->title(t('Region'))
+      ->default('CA-ON')
+      ->required());
   }
 
   /**
@@ -144,10 +142,8 @@ final class StoreResource implements ResourceInterface {
    * the key is spelled as a string: rename the key, rename the parameter.
    */
   #[RefinesInput(self::REGION)]
-  public static function regionOfCountry(DataDefinitionInterface $region, string $country): DataDefinitionInterface {
-    return $region->addConstraint('LabeledChoice', [
-      'choices' => self::regions($country),
-    ]);
+  public static function regionOfCountry(string $country): Schema {
+    return Schema::options(self::regions($country));
   }
 
   /**
@@ -185,17 +181,18 @@ the method below it:
 - **`#[RefinesInput(self::REGION)]`** marks a refiner of `region`, a
   static method like everything else on the class. The key is named by
   its constant, as on the first page.
-- **Its first parameter is the key's definition**; each one after it is
-  a key it watches, matched by name. `string $country` watches
+- **Each parameter is a key it watches**, matched by name. `string $country` watches
   `country`, so the method runs once `country` has a value, and is handed
   that value. The signature is the whole dependency declaration. The
   parameter is the one place the key is named without its constant, so
   its name must match the value of `self::COUNTRY`, `'country'`, and a
   rename changes both; the method's docblock says so.
-- **It may only narrow.** The answer replaces the six regions with the
-  chosen country's three, which is fewer; an answer that added a region
-  not declared, or dropped the constraint, would be refused the moment it
-  was given. That is what lets every caller trust what it read: whatever
+- **It returns what the country adds.** `Schema::options()` is the list
+  for that country: three of the six regions, with their labels. The
+  module applies it to the key, which keeps everything else it
+  declares. An answer can only add to what the key allows, and one that
+  offered a region not declared would be refused the moment it was
+  given. That is what lets every caller trust what it read: whatever
   the answers, the region is one of the six.
 - **One method, one rule**, its docblock saying the rule.
 

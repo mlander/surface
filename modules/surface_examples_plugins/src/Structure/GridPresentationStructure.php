@@ -29,7 +29,7 @@ final class GridPresentationStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('columns', Schema::integer()
+    $inputs->add('columns', Schema::integer()
       ->title(t('Columns'))
       ->description(t('How many items sit side by side.'))
       ->default(3)

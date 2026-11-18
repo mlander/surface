@@ -92,28 +92,28 @@ final class ItineraryResource implements ResourceInterface {
     $when = ArrangementGroup::fieldset('when', t('When'));
     $who = ArrangementGroup::fieldset('who', t('Who'));
 
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title(t('Id'))
       ->required());
 
-    $inputs->addSchema('region', Schema::string()
+    $inputs->add('region', Schema::string()
       ->title(t('Region'))
       ->default('north')
       ->check('drupal:Choice', ['choices' => array_keys(self::GUIDES)])
       ->required());
     $inputs->describe('region', group: $where);
 
-    $inputs->addSchema('day', Schema::string()
+    $inputs->add('day', Schema::string()
       ->title(t('Day'))
       ->required());
     $inputs->describe('day', group: $when);
 
-    $inputs->addSchema('nights', Schema::integer()
+    $inputs->add('nights', Schema::integer()
       ->title(t('Nights'))
       ->default(1));
     $inputs->describe('nights', group: $when);
 
-    $inputs->addSchema('guide', Schema::string()
+    $inputs->add('guide', Schema::string()
       ->title(t('Guide'))
       ->check('drupal:Choice', ['choices' => array_merge(...array_values(self::GUIDES))]));
     $inputs->describe('guide', group: $who);

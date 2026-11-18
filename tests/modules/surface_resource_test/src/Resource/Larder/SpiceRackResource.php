@@ -71,15 +71,15 @@ final class SpiceRackResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('shelf', Schema::string()
+    $inputs->add('shelf', Schema::string()
       ->title('Shelf')
       ->default('middle'));
-    $inputs->addSchema('spices', Schema::integer()
+    $inputs->add('spices', Schema::integer()
       ->title('Spices')
       ->default(3)
       ->minimum(0)
       ->maximum(40));
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title('Label')
       ->default('Spices'));
   }

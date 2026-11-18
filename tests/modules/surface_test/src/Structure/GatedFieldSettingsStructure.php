@@ -38,7 +38,7 @@ final class GatedFieldSettingsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note'))
       ->description(t('A note stored with this field instance.')));
   }

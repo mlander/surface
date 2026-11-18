@@ -35,28 +35,28 @@ final class MySettingsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->default('Latest content')
       ->maxLength(64)
       ->required());
 
-    $inputs->addSchema('items_per_page', Schema::integer()
+    $inputs->add('items_per_page', Schema::integer()
       ->title(t('Items per page'))
       ->default(10)
       ->minimum(1)
       ->maximum(50)
       ->required());
 
-    $inputs->addSchema('show_author', Schema::bool()
+    $inputs->add('show_author', Schema::bool()
       ->title(t('Show the author'))
       ->default(TRUE));
 
-    $inputs->addSchema('notify_email', Schema::string()->format('email')
+    $inputs->add('notify_email', Schema::string()->format('email')
       ->title(t('Email for notices'))
       ->default('admin@example.com'));
 
-    $inputs->addSchema('layout', Schema::options([
+    $inputs->add('layout', Schema::options([
       'list' => t('List'),
       'grid' => t('Grid'),
     ])

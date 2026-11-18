@@ -119,7 +119,7 @@ use PortableSchema\UriTemplate;
  * then reads the document as `PortableSchema\Builder\Schema` values, and
  * every entry point takes and answers arrays (prepared()).
  *
- * A key an author states as a Schema (addSchema()) is read the same way,
+ * A key an author states as a Schema (add()) is read the same way,
  * as the author's own (authored()): its `drupal:` checks are the
  * constraints they name, with their options, and an optional key with a
  * default may be cleared. Decision: see
@@ -412,7 +412,7 @@ final class SchemaReader {
    * The notes on an author's schema that say what was done, by pointer.
    *
    * What an author's schema holds and the reader does not read as it is
-   * written is the author's to fix, so addSchema() refuses it, but for
+   * written is the author's to fix, so add() refuses it, but for
    * these, where nothing is lost: a link, dropped, since links are the
    * emitter's; a check the site cannot build, kept for the server to
    * answer as unchecked; a check beside a keyword stating the same
@@ -568,7 +568,7 @@ final class SchemaReader {
    *   The document's hash, as ResourceBlueprint::readStructure() took it:
    *   handed on to each structure the frame holds, so it is taken once.
    * @param bool $authored
-   *   TRUE for a structure of a schema an author handed addSchema(), read
+   *   TRUE for a structure of a schema an author handed add(), read
    *   as authored() reads it.
    */
   public static function fill(BlueprintInterface $inputs, array $root, string $pointer, ?string $hash = NULL, bool $authored = FALSE): void {
@@ -585,14 +585,14 @@ final class SchemaReader {
     $blueprint = static::blueprintOf($inputs);
     $reader->frame(static::at($schema, $pointer), $pointer, $blueprint, $schema);
     if ($authored) {
-      $reader->refuseUnread(sprintf('The structure %s, of a schema handed to addSchema(),', $blueprint->ownerId()));
+      $reader->refuseUnread(sprintf('The structure %s, of a schema handed to add(),', $blueprint->ownerId()));
     }
   }
 
   /**
    * Reads one key an author states as a Schema into a blueprint.
    *
-   * What BlueprintAdditionsInterface::addSchema() runs. The schema is laid
+   * What BlueprintAdditionsInterface::add() runs. The schema is laid
    * in an object of one property, the key, closed, its `$defs` moved up to
    * the object so its references find them, and the key listed in
    * `required` where it is required; that object is read as any frame is,
@@ -653,7 +653,7 @@ final class SchemaReader {
    *   where its schema is marked `required()`, and only there.
    * @param string|null $what
    *   Who was handed the schema, for the messages; NULL for
-   *   `addSchema("<key>")`.
+   *   `add("<key>")`.
    *
    * @return array<string, string>
    *   What was read otherwise than as written and is accepted (a link
@@ -667,7 +667,7 @@ final class SchemaReader {
    *   does not read as written and does not accept.
    */
   public static function authored(BlueprintAdditionsInterface $inputs, string $key, Schema $schema, ?bool $required = NULL, ?string $what = NULL): array {
-    $what ??= sprintf('addSchema("%s")', $key);
+    $what ??= sprintf('add("%s")', $key);
     if (!$schema->isBoolean()) {
       $schema = static::shapeReferences($schema, $inputs);
     }
@@ -2644,7 +2644,8 @@ final class SchemaReader {
       if (isset($declared['shape']) && $shape === NULL) {
         $this->note(static::below($at, 'ports', (string) $port, 'shape'), 'Read as the shape\'s type: the site has no shape of that id.');
       }
-      $this->framing($inputs, 'a port')->reads((string) $port, $shape ?? $declared['type'], (bool) ($declared['required'] ?? FALSE));
+      $read = LeafTypes::schemaOf($shape ?? $declared['type'], sprintf('The "%s" port', $port));
+      $this->framing($inputs, 'a port')->reads((string) $port, ($declared['required'] ?? FALSE) === TRUE ? $read->required() : $read);
     }
     if (is_int($extension['version'] ?? NULL) && $extension['version'] > 1) {
       $this->note(static::below($at, 'version'), 'Not read: a version counts the changes made to stored values, which are the declaring class\'s.');
@@ -3699,7 +3700,7 @@ final class SchemaReader {
       return FALSE;
     }
     foreach ($schema->get('properties') as $property) {
-      if (!Schemas::isObjectSchema($property) || $property->get('$ref') !== NULL || $property->get('allOf') !== NULL || isset(static::extensionOf($property)['by']) || $property->has(self::TYPE_BY)) {
+      if (!Schemas::isObjectSchema($property) || ($property->get('$ref') !== NULL && !($this->outputs && isset(LeafTypes::LIBRARY[$property->get('$ref')]))) || $property->get('allOf') !== NULL || isset(static::extensionOf($property)['by']) || $property->has(self::TYPE_BY)) {
         return FALSE;
       }
       $types = array_values(array_diff((array) ($property->get('type') ?? []), ['null']));
@@ -4875,7 +4876,7 @@ final class SchemaReader {
             'doesNotApply' => $rule->doesNotApply(),
             'require' => $rule->require(),
             'because' => $rule->because($effect[1]),
-            default => $rule->constrain($effect[0], $effect[1]),
+            default => $rule->constrain(Schema::any()->check(PortableKeywords::PROVIDER . $effect[0], $effect[1])),
           };
         }
       }

@@ -28,21 +28,21 @@ final class NarrowedResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('code', Schema::string()
+    $inputs->add('code', Schema::string()
       ->title(t('Code'))
       ->default('main'));
-    $inputs->addSchema('limit', Schema::integer()
+    $inputs->add('limit', Schema::integer()
       ->title(t('Limit'))
       ->default(5)
       ->minimum(1)
       ->maximum(100));
-    $inputs->addSchema('mode', Schema::options(['quiet' => t('Quiet'), 'loud' => t('Loud'), 'silent' => t('Silent')])
+    $inputs->add('mode', Schema::options(['quiet' => t('Quiet'), 'loud' => t('Loud'), 'silent' => t('Silent')])
       ->title(t('Mode'))
       ->default('quiet'));
-    $inputs->addSchema('size', Schema::integer()
+    $inputs->add('size', Schema::integer()
       ->title(t('Size'))
       ->default(3));
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note')));
   }
 

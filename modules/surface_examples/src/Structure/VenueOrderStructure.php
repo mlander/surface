@@ -19,12 +19,12 @@ final class VenueOrderStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title(t('Venue'))
       ->description(t('The machine name of a venue the site has.'))
       ->required());
 
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title(t('Weight'))
       ->description(t('Its place among the venues: lighter first.'))
       ->minimum(-1000)

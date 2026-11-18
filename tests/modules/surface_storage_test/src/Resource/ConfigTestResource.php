@@ -58,23 +58,23 @@ final class ConfigTestResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title('Id')
       ->required());
     // What the entity's schema states, said here too, so no door offers
     // what storage refuses.
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title('Label')
       ->check('drupal:Regex', ['pattern' => '/([^\PC])/u', 'match' => FALSE])
       ->required());
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title('Weight')
       ->default(0)
       ->minimum(-2147483648)
       ->maximum(2147483647));
-    $inputs->addSchema('style', Schema::string()
+    $inputs->add('style', Schema::string()
       ->title('Style'));
-    $inputs->addSchema('protected_property', Schema::string()
+    $inputs->add('protected_property', Schema::string()
       ->title('Protected property'));
   }
 

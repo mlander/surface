@@ -26,7 +26,7 @@ final class NorthWordingAlter implements AltersInputsInterface {
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->describe('token', label: 'North token', help: 'Issued by the north desk.');
 
-    $inputs->addSchema('reviewed', Schema::bool()
+    $inputs->add('reviewed', Schema::bool()
       ->title('Reviewed'));
 
     $inputs->describe('third_party_settings.north_wording', label: 'North');

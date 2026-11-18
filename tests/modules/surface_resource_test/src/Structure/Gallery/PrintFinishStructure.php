@@ -23,7 +23,7 @@ final class PrintFinishStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('edition', Schema::integer()
+    $inputs->add('edition', Schema::integer()
       ->title(t('Edition')));
   }
 

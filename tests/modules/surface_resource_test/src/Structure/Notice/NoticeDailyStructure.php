@@ -21,7 +21,7 @@ final class NoticeDailyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('hour', Schema::integer()
+    $inputs->add('hour', Schema::integer()
       ->title('Hour')
       ->default(8)
       ->minimum(0)

@@ -23,7 +23,7 @@ final class UnofferedVariantStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::enum(['jar', 'pot'])
+    $inputs->add('kind', Schema::enum(['jar', 'pot'])
       ->title('Kind'));
     $inputs->attachVariants('settings', by: 'kind');
   }

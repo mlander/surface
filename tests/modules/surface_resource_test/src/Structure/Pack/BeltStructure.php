@@ -19,10 +19,10 @@ final class BeltStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('padded', Schema::bool()
+    $inputs->add('padded', Schema::bool()
       ->title(t('Padded'))
       ->default(TRUE));
-    $inputs->addSchema('width', Schema::integer()
+    $inputs->add('width', Schema::integer()
       ->title(t('Width'))
       ->minimum(1));
   }

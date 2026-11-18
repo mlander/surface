@@ -26,6 +26,7 @@ use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests rules declared as data: built, evaluated, stated, listed.
@@ -393,15 +394,19 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
   public function testTheVocabularyIsClosed(): void {
     $cases = [
       'a constraint outside it' => [
-        static fn () => (new Rule('name'))->constrain('Email', []),
+        static fn () => (new Rule('name'))->constrain(Schema::any()->check('drupal:Email', [])),
         'which a rule cannot state',
       ],
       'an option outside it' => [
-        static fn () => (new Rule('count'))->constrain('Range', ['max' => 5, 'maxMessage' => 'No.']),
-        'takes min, max and message, and was given max, maxMessage',
+        static fn () => (new Rule('count'))->constrain(Schema::any()->check('drupal:Range', [
+          'max' => 5,
+          'maxMessage' => 'No.',
+          'minMessage' => 'No.',
+        ])),
+        'takes min, max and message, and was given max, maxMessage, minMessage',
       ],
       'a pattern no schema states exactly' => [
-        static fn () => (new Rule('code'))->constrain('Regex', ['pattern' => '/^\w+$/i']),
+        static fn () => (new Rule('code'))->constrain(Schema::any()->check('drupal:Regex', ['pattern' => '/^\w+$/i'])),
         'no JSON Schema can state exactly',
       ],
       'an effect beside does not apply' => [

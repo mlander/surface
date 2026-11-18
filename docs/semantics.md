@@ -308,7 +308,7 @@ One deliberate exception to [the rule above](#absent-null-or-a-value):
 a secret keeps what it holds when it is sent nothing, *whether or not
 it is required*, and it is cleared by a marker instead.
 
-A key declared secret (`DefinitionMetadata::setSecret()`, see
+A key declared secret (`writeOnly(TRUE)` on its schema, see
 [Declaring a resource](declaring-a-resource.md#secrets)) is a key whose
 stored value is never read back to the caller that writes it. A
 generated form therefore renders an empty password box every time, so a
@@ -528,10 +528,10 @@ A message option may be written with `t()`; the build hands Symfony its
 source string. Written so, potx extracts it as it extracts every label:
 
 ```php
-->addConstraint('Regex', [
+->check('drupal:Regex', [
   'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
   'message' => t('Write the time as HH:MM, such as 18:30.'),
-]);
+])
 ```
 
 A Symfony constraint holds its message as a string, and core's

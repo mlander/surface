@@ -21,7 +21,7 @@ final class SoilStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('depth', Schema::integer()
+    $inputs->add('depth', Schema::integer()
       ->title(t('Depth'))
       ->default(20));
   }

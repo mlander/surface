@@ -19,7 +19,7 @@ final class EntryStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('line', Schema::string()
+    $inputs->add('line', Schema::string()
       ->title(t('Line')));
     $inputs->mixIn(RecordStructure::class);
   }

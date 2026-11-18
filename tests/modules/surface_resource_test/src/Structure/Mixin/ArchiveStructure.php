@@ -26,10 +26,10 @@ final class ArchiveStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('shelf', Schema::string()
+    $inputs->add('shelf', Schema::string()
       ->title(t('Shelf'))
       ->required());
-    $inputs->addSchema('circle', Schema::options([
+    $inputs->add('circle', Schema::options([
       'public' => t('Public'),
       'staff' => t('Staff'),
     ])

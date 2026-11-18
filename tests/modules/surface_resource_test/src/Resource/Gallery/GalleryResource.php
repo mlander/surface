@@ -51,13 +51,13 @@ final class GalleryResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->required());
     $inputs->mixIn(PlaqueStructure::class);
     $inputs->attach('north', WallStructure::class, t('North wall'));
     $inputs->attach('south', WallStructure::class, t('South wall'));
-    $inputs->addSchema('medium', Schema::string()
+    $inputs->add('medium', Schema::string()
       ->title(t('Medium'))
       ->default('oil')
       ->required());

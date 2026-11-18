@@ -24,7 +24,7 @@ This page uses four things and nothing else:
 | `#[Resource]` | what the thing is called and where it is stored |
 | `#[Operation]` | how it is asked for, what that does, and the permission that gates it |
 | a storage | the config object it lives in |
-| `defineInputs()` with `addSchema()` | its keys: name, and a schema of type, label and what each allows |
+| `defineInputs()` with `add()` | its keys: name, and a schema of type, label and what each allows |
 
 Every file below is the shipped module `surface_examples_first`, word for
 word; a test fails if the page and the module differ, so what you copy
@@ -180,17 +180,17 @@ final class NewsletterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema(self::SENDER_NAME, Schema::string()
+    $inputs->add(self::SENDER_NAME, Schema::string()
       ->title(t('Sender name'))
       ->maxLength(64)
       ->required());
 
-    $inputs->addSchema(self::SENDER_EMAIL, Schema::string()
+    $inputs->add(self::SENDER_EMAIL, Schema::string()
       ->title(t('Sender email'))
       ->format('email')
       ->required());
 
-    $inputs->addSchema(self::FREQUENCY, Schema::options([
+    $inputs->add(self::FREQUENCY, Schema::options([
       'weekly' => t('Weekly'),
       'monthly' => t('Monthly'),
     ])
@@ -199,7 +199,7 @@ final class NewsletterResource implements ResourceInterface {
       ->default('weekly')
       ->required());
 
-    $inputs->addSchema(self::MAX_RECIPIENTS, Schema::integer()
+    $inputs->add(self::MAX_RECIPIENTS, Schema::integer()
       ->title(t('Maximum recipients per send'))
       ->description(t('Larger lists are sent in batches of this size.'))
       ->minimum(1)
@@ -230,19 +230,20 @@ Read it top to bottom:
 - **The constants** name each key once, and every later mention is the
   constant, `self::SENDER_NAME`, so a key can be renamed or its uses
   found ([Key names](declaring-a-resource.md#key-names)).
-- **`defineInputs()`** declares the keys. `addSchema()` takes the key
+- **`defineInputs()`** declares the keys. `add()` takes the key
   and a Portable Schema of what it holds, built from `Schema::string()`,
   `Schema::integer()`, `Schema::bool()` or `Schema::options()` with one
   method per keyword: `title()`, `description()`, `maxLength()`,
-  `format()`, `minimum()`, `maximum()`, `default()`.
+  `format()`, `minimum()`, `maximum()`, `default()`, and `required()`.
 - **The label** is `title()`. It is the form element's title, the tool's
   property label and the served schema's `title`; `description()` is the
   text under the element and the property's description.
-- **Required or not.** A key with no default is required. One with a
-  default is optional unless `required: TRUE` says otherwise, as for the
-  frequency, which always holds a value. An optional key with a default,
-  the maximum, may be cleared, which puts the default back, so the
-  served schema allows `null` for it.
+- **Required or not.** A key is required when its schema says
+  `required()`: the sender's name and email, and the frequency, which
+  starts from its default and always holds a value. Any other key is
+  optional. An optional key with a default, the maximum, may be
+  cleared, which puts the default back, so the served schema allows
+  `null` for it.
 - **What a key allows** is a keyword. `maxLength()` becomes a maximum
   length, `format('email')` an email address, `minimum()` and
   `maximum()` a number field bounded at 1 and 10000, and
@@ -384,10 +385,7 @@ surface:resource --answer=surface_examples_first --answer=first.newsletter
 permissions file the module has gains the new entry and keeps every
 other. This page still shows each file in full and stays the source of
 truth: a test answers the interview as the newsletter needs and fails
-when a single byte it writes differs from the files above, but for the
-keys, which the command writes with `add()`, the module's other
-spelling of the same keys, so the files written from them are the same.
-The keys can
+when a single byte it writes differs from the files above. The keys can
 also come from a config schema entry or a JSON Schema document
 ([Generating a resource](generating.md)).
 

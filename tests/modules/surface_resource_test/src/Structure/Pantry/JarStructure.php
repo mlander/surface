@@ -22,11 +22,11 @@ final class JarStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('lid', Schema::enum(['screw', 'clip'])
+    $inputs->add('lid', Schema::enum(['screw', 'clip'])
       ->title('Lid')
       ->description('How the jar closes.')
       ->default('screw'));
-    $inputs->addSchema('volume', Schema::integer()
+    $inputs->add('volume', Schema::integer()
       ->title('Volume')
       ->default(500)
       ->minimum(1)

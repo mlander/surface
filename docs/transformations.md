@@ -127,13 +127,18 @@ Example 16 declares two of its keys this way:
 <!-- excerpt: modules/surface_examples_references/src/Resource/SponsorshipResource.php -->
 
 ```php
-$inputs->add('page', 'integer', t('Announcement'))
-  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
-  ->setDescription(t('The article that announces the sponsor.'));
+$inputs->add('page', Schema::integer()
+  ->title(t('Announcement'))
+  ->description(t('The article that announces the sponsor.'))
+  ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
 
 // Of any type: an entity type, then an id of it.
-$inputs->attach('thing', ThingStructure::class, t('Featured beside'))
-  ->setDescription(t('Any content the sponsor is featured beside.'));
+$inputs->attach(
+  'thing',
+  ThingStructure::class,
+  t('Featured beside'),
+  description: t('Any content the sponsor is featured beside.'),
+);
 ```
 
 Its config object stores a content entity by its uuid, which names the
@@ -389,13 +394,20 @@ Example 15's listing answers a page of the venues and how many matched:
 <!-- excerpt: modules/surface_examples/src/Structure/VenueListingStructure.php -->
 
 ```php
-$outputs->addList('items', $item, t('Venues'))
-  ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
-  ->setRequired(TRUE);
+$outputs->add('items', Schema::list(Schema::object([
+  'id' => Schema::string()->title(t('Machine name'))->required(),
+  'label' => Schema::string()->title(t('Name'))->required(),
+  'capacity' => Schema::integer()->title(t('Capacity'))->required(),
+  'weight' => Schema::integer()->title(t('Weight'))->required(),
+])->title(t('Venue')))
+  ->title(t('Venues'))
+  ->description(t('The page of venues, lighter first, each one the account may read.'))
+  ->required());
 
-$outputs->add('total', 'integer', t('Total'))
-  ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
-  ->setRequired(TRUE);
+$outputs->add('total', Schema::integer()
+  ->title(t('Total'))
+  ->description(t('How many venues the filter matched that the account may read, on every page.'))
+  ->required());
 ```
 
 A listing is a read only operation, which is never committed, so its
@@ -452,13 +464,19 @@ Example 15's venue computes its slug from its name:
 <!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
-$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
-  ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
-  ->addConstraint('Regex', [
-    'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
-    'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
-  ])
-  ->addConstraint('Length', ['max' => 128]);
+$inputs->compute(
+  'slug',
+  Schema::string()
+    ->title(t('Slug'))
+    ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+    ->check('drupal:Regex', [
+      'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+      'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+    ])
+    ->maxLength(128),
+  from: ['label'],
+  using: Slugify::class,
+);
 ```
 
 The class is a pure function of the keys `from:` names:
@@ -482,8 +500,8 @@ and both documents state it. Three choices settle it
   refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so
   the narrowing (`POST .../schema`) can run it ahead of a write and
   answer the value it would compute for the values in progress. It is
-  handed the values `from:` names and the key's own schema, `$key`, which
-  is declaration, not site state. What it promises is its standard
+  handed the values `from:` names and the key's own schema, `$key`,
+  which is declaration, not site state. What it promises is its standard
   keywords, read with `get()`: `MachineName` cuts to `maxLength`. What
   Surface keeps on a schema beyond them is not promised. A changed time reads the clock:
   it stays a storage's to add in `prepare()`.
@@ -492,7 +510,7 @@ and both documents state it. Three choices settle it
   thing is created, and again on every write that changes a key in
   `from` only when it says `when: Compute::ON_CHANGE`. A write that
   changes no source keeps what is stored. The value is then judged by
-  its own constraints and rules, as any key's is, and a refusal of it
+  its own rules, as any key's is, and a refusal of it
   names the keys it is computed from, the ones a caller can change.
 - **A value sent for it.** Equal to the one it holds, it is noted, code
   `computed`, and not taken, as a locked key's is, so a client that
@@ -518,13 +536,19 @@ gives one:
 <!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
-$inputs->compute('id', 'machine_name', t('Machine name'),
-  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
-  ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-  ->addConstraint('Length', ['max' => 32]);
+$inputs->compute(
+  'id',
+  Schema::of('drupal:config/machine_name')
+    ->title(t('Machine name'))
+    ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+    ->check('drupal:Length', ['max' => 32]),
+  from: ['label'],
+  using: MachineName::class,
+  when: Compute::UNLESS_SENT,
+);
 ```
 
-`machine_name` is core's config schema type, so the key is a string with
+`drupal:config/machine_name` names core's config schema type, so the key is a string with
 its pattern and a Length of 166, narrowed here to 32. The stock
 `MachineName` transliterates, lowercases, replaces what a machine name
 may not hold with underscores and cuts to the key's Length, as core's

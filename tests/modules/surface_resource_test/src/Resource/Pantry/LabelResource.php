@@ -20,7 +20,7 @@ final class LabelResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('text', Schema::string()
+    $inputs->add('text', Schema::string()
       ->title('Text')
       ->default('Pantry'));
   }

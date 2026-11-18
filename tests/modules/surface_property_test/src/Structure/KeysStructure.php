@@ -30,7 +30,7 @@ final class KeysStructure implements StructureInterface {
     $about = ArrangementGroup::fieldset('about', t('About'));
     $more = ArrangementGroup::details('more', t('More'), collapsed: TRUE, weight: 5, description: t('Rarely needed.'));
 
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->description(t('As printed on the badge.'))
       ->maxLength(64)
@@ -39,36 +39,36 @@ final class KeysStructure implements StructureInterface {
       ->required());
     $inputs->describe('name', group: $about, weight: 1, placeholder: t('Full name'), help: t('Shown under the photo.'));
 
-    $inputs->addSchema('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
+    $inputs->add('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
       ->title(t('Frequency'))
       ->default('weekly')
       ->required());
     $inputs->describe('frequency', group: $about, weight: 2);
 
-    $inputs->addSchema('email', Schema::string()->format('email')
+    $inputs->add('email', Schema::string()->format('email')
       ->title(t('Email')));
 
-    $inputs->addSchema('id', Schema::of('drupal:config/machine_name')
+    $inputs->add('id', Schema::of('drupal:config/machine_name')
       ->title(t('Handle')));
 
-    $inputs->addSchema('code', Schema::of(Code::class)
+    $inputs->add('code', Schema::of(Code::class)
       ->title(t('Code')));
 
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note'))
       ->ui(widget: 'textarea'));
     $inputs->describe('note', group: $more, prefix: t('Note:'), suffix: t('(optional)'));
 
-    $inputs->addSchema('day', Schema::string()
+    $inputs->add('day', Schema::string()
       ->title(t('Day'))
       ->ui(widget: 'date'));
 
-    $inputs->addSchema('tags', Schema::list(Schema::string()->maxLength(10))
+    $inputs->add('tags', Schema::list(Schema::string()->maxLength(10))
       ->title(t('Tags'))
       ->default([])
       ->maxItems(5));
 
-    $inputs->addSchema('count', Schema::integer()
+    $inputs->add('count', Schema::integer()
       ->title(t('Count'))
       ->default(3)
       ->minimum(1)

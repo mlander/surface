@@ -21,10 +21,10 @@ final class VaultBackupStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('host', Schema::string()
+    $inputs->add('host', Schema::string()
       ->title(t('Host'))
       ->default(''));
-    $inputs->addSchema('password', Schema::string()
+    $inputs->add('password', Schema::string()
       ->title(t('Password'))
       ->default('')
       ->writeOnly(TRUE));

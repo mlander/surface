@@ -157,7 +157,7 @@ final class SiteList implements RefinableCacheableDependencyInterface {
   }
 
   /**
-   * Refuses a boolean schema, as addSchema() does.
+   * Refuses a boolean schema, as add() does.
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The schema.

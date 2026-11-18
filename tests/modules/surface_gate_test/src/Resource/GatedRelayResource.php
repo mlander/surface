@@ -25,11 +25,11 @@ final class GatedRelayResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('node', Schema::integer()
+    $inputs->add('node', Schema::integer()
       ->title('Node')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
       ->required());
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title('Note'));
   }
 

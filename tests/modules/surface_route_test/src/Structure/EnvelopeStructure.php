@@ -19,12 +19,12 @@ final class EnvelopeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('color', Schema::enum(['white', 'cream'])
+    $inputs->add('color', Schema::enum(['white', 'cream'])
       ->title('Color')
       ->default('white')
       ->required());
 
-    $inputs->addSchema('stamps', Schema::integer()
+    $inputs->add('stamps', Schema::integer()
       ->title('Stamps')
       ->default(1)
       ->minimum(1)

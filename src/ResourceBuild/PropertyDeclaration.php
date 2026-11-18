@@ -85,7 +85,7 @@ use PortableSchema\Builder\Schema;
  * the `type`, `?T` null beside it, the initializer the `default`, #[Of]
  * the `$ref`, #[Schema] keywords, #[Check] checks, #[Ui] hints;
  * required with no default and no null, or with #[Required]), and
- * declared with addSchema(). The package's attributes are a spelling of
+ * declared with add(). The package's attributes are a spelling of
  * #[Input], so they combine with what #[Input] combines with and no more:
  * #[Examples] and #[Rule]; another kind (#[Output], #[Port], #[Computed],
  * #[Attach] and the rest) is refused as it is beside #[Input]. #[Input],
@@ -367,11 +367,11 @@ final class PropertyDeclaration {
    * Declares a property spelled with the package's attributes.
    *
    * Its schema, as ClassReader builds a property's (schema()), declared
-   * with addSchema(), marked required where it carries #[Required], or has
+   * with add(), marked required where it carries #[Required], or has
    * no initializer and a type that refuses null, as ClassReader marks a
    * property; the group its
    * #[Ui] names is the class's, laid on with describe() as #[Describe]
-   * lays one. What addSchema() refuses is refused naming the property.
+   * lays one. What add() refuses is refused naming the property.
    *
    * @param \ReflectionProperty $property
    *   The property.
@@ -391,7 +391,7 @@ final class PropertyDeclaration {
       $schema = $schema->required();
     }
     try {
-      $blueprint->addSchema($key, $schema);
+      $blueprint->add($key, $schema);
     }
     catch (\InvalidArgumentException $refused) {
       throw new \InvalidArgumentException(sprintf('%s::$%s: %s', $property->getDeclaringClass()->getName(), $key, $refused->getMessage()), 0, $refused);
@@ -631,7 +631,8 @@ final class PropertyDeclaration {
     $default = $property->hasDefaultValue() ? $property->getDefaultValue() : NULL;
 
     if ($port = self::attribute($property, Port::class)) {
-      $blueprint->reads($key, $port->type ?? self::type($property), $port->required);
+      $read = LeafTypes::schemaOf($port->type ?? self::type($property), sprintf('The "%s" port', $key));
+      $blueprint->reads($key, $port->required ? $read->required() : $read);
       return NULL;
     }
     if ($computed = self::attribute($property, Computed::class)) {
@@ -657,8 +658,16 @@ final class PropertyDeclaration {
     if ($each = self::attribute($property, Each::class)) {
       // An entry #[Schema(additionalProperties:)] lays rules on is a
       // definition, which decorate() reaches through the map.
-      $entry = self::constrainsItem($property) ? DataDefinition::create($each->type) : $each->type;
-      $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label), $each->default);
+      // A default is the entry schema's.
+      if ($each->default !== NULL && self::constrainsItem($property)) {
+        throw new \LogicException(sprintf('%s::$%s carries #[Each] with a default and #[Schema] or #[Check] rules on its entry: state the default in the entry\'s #[Schema(additionalProperties:)] instead.', $property->getDeclaringClass()->getName(), $key));
+      }
+      $entry = match (TRUE) {
+        self::constrainsItem($property) => DataDefinition::create($each->type),
+        $each->default !== NULL => LeafTypes::schemaOf($each->type, sprintf('#[Each] on %s::$%s', $property->getDeclaringClass()->getName(), $key))->default($each->default),
+        default => $each->type,
+      };
+      $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label));
       self::word($definition, $each->description);
       return $definition;
     }

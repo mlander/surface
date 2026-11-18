@@ -20,7 +20,7 @@ final class EditOnlyRecipeAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('revision_note', Schema::string()
+    $inputs->add('revision_note', Schema::string()
       ->title('Revision note'));
   }
 

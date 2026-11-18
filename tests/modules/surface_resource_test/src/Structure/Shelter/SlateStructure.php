@@ -22,7 +22,7 @@ final class SlateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('tiles', Schema::integer()
+    $inputs->add('tiles', Schema::integer()
       ->title(t('Tiles'))
       ->minimum(1)
       ->required());

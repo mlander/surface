@@ -29,62 +29,6 @@ use PortableSchema\Builder\Schema;
 interface BlueprintAdditionsInterface {
 
   /**
-   * Adds a key: name, type, label.
-   *
-   * Returns the core definition, so the rest (required, constraints,
-   * description) is plain core API.
-   *
-   * The type is one the contract states a JSON Schema type for:
-   * `string`, `email`, `uri`, `datetime_iso8601`, `integer`, `timestamp`,
-   * `float` or `boolean`. It may be a shape's class, `add('license',
-   * License::class, t('Event license'))`: the key then starts from the
-   * shape as its alters left it, and what it adds (required, a default, a
-   * constraint, a description) may only narrow the shape, which its
-   * owner's build checks. It may be a config schema type of one value,
-   * `machine_name`, which is the string underneath with the type's
-   * constraints. Any other type is refused: a group of keys is attach()
-   * or addMap(), a list addList().
-   *
-   * A key that refers to an entity is one of these, the id as the entity
-   * type keeps it, with the SurfaceValidReference constraint naming the
-   * entity type and the bundles it may be of; the build refuses an id
-   * type that is not the entity type's:
-   *
-   * @code
-   * $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
-   *   ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue']);
-   * $inputs->add('page', 'integer', t('Announcement'))
-   *   ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]);
-   * @endcode
-   *
-   * @param string $key
-   *   The key.
-   * @param string $type
-   *   One of the eight types, a shape's class, or a config schema type
-   *   of one of them.
-   *   See docs/declaring-a-resource.md#the-types-a-key-takes.
-   * @param string|\Stringable $label
-   *   The label.
-   * @param mixed $default
-   *   The default value. NULL declares none: a key whose default is NULL
-   *   is a key with no default, which is what core definitions already
-   *   say by default.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinition
-   *   The definition, already part of the blueprint.
-   *
-   * @throws \LogicException
-   *   For a type JSON Schema has no type for, a class that is no shape, a
-   *   shape that declares what only a key may (a default, required) or a
-   *   map or list, and, for an alter of a shape, always: a shape has no
-   *   keys to add to.
-   *
-   * @see docs/options.md#a-key-that-refers-to-an-entity
-   * @see docs/decisions.md#a-reference-is-a-constraint-on-a-value
-   */
-  public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
-
-  /**
    * Adds a map of keys held here alone: an anonymous object.
    *
    * The callable is handed a blueprint whose keys are the map's, declared
@@ -105,8 +49,8 @@ interface BlueprintAdditionsInterface {
    *
    * @code
    * $inputs->addMap('coordinates', t('Coordinates'), function (BlueprintInterface $map): void {
-   *   $map->add('lat', 'float', t('Latitude'));
-   *   $map->add('lng', 'float', t('Longitude'));
+   *   $map->add('lat', Schema::number()->title(t('Latitude')));
+   *   $map->add('lng', Schema::number()->title(t('Longitude')));
    * });
    * @endcode
    *
@@ -210,7 +154,7 @@ interface BlueprintAdditionsInterface {
    * Adds a key stated as a Portable Schema.
    *
    * @code
-   * $inputs->addSchema('capacity', Schema::integer()
+   * $inputs->add('capacity', Schema::integer()
    *   ->title(t('Capacity'))
    *   ->minimum(1)
    *   ->maximum(1000)
@@ -218,35 +162,60 @@ interface BlueprintAdditionsInterface {
    * @endcode
    *
    * The schema is read as a document is (SchemaReader::authored()), into
-   * the verbs it says: one value add() declares, a list addList(), an
-   * object addMap(), a `$ref` to a def a child or a shape; its keywords
-   * the constraints they are written from, `title` the label. A
+   * the keys it says: one value, a list, an object, a `$ref` to a def a
+   * child or a shape (`Schema::of(License::class)`); its keywords the
+   * constraints they are written from, `title` the label. A
    * `drupal:<plugin id>` check is that constraint with its options, and
    * `Schema::of('portable:email')` the email type. The schema is complete
-   * at the call, so nothing is returned to go on with: the definition is
-   * the module's, and the document served for it says what the definition
+   * at the call, so the blueprint is returned: the definition is the
+   * module's, and the document served for it says what the definition
    * means, a key that null may clear included. A boolean schema is
    * refused. A schema held as an array is handed in as
    * Schema::from($array).
    *
+   * A key that refers to an entity carries the SurfaceValidReference
+   * check naming the entity type and the bundles it may be of; the build
+   * refuses an id type that is not the entity type's:
+   *
+   * @code
+   * $inputs->add('venue', Schema::string()
+   *   ->title(t('Venue'))
+   *   ->default('riverside')
+   *   ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue']));
+   * @endcode
+   *
+   * The old spelling, a type, a label and a default
+   * (`add('name', 'string', t('Name'))`, returning the core definition),
+   * is still read until its last callers are converted, and is not to be
+   * written: see docs/decisions.md#authoring-takes-a-schema.
+   *
    * @param string $key
    *   The key.
-   * @param \PortableSchema\Builder\Schema $schema
-   *   What it holds.
-   *   A key is required where the schema is marked `required()`, and
-   *   only there.
+   * @param \PortableSchema\Builder\Schema|string $schema
+   *   What it holds. A key is required where the schema is marked
+   *   `required()`, and only there. A string is the old spelling's type.
+   * @param string|\Stringable|null $label
+   *   The old spelling's label; NULL with a schema.
+   * @param mixed $default
+   *   The old spelling's default; NULL with a schema, whose `default`
+   *   says it.
    *
-   * @return $this
+   * @return \Drupal\Core\TypedData\DataDefinition|$this
+   *   The blueprint, for a schema; the definition, for the old spelling.
+   *
+   * @phpstan-return ($schema is \PortableSchema\Builder\Schema ? static : \Drupal\Core\TypedData\DataDefinition)
    *
    * @throws \LogicException
    *   When the key is declared already, or the schema needs what this
    *   blueprint does not declare (a child in an alter's blueprint).
    * @throws \InvalidArgumentException
-   *   For a boolean schema, and for what a document cannot hold.
+   *   For a boolean schema, for what a document cannot hold, and for a
+   *   label or a default handed beside a schema.
    *
    * @see docs/decisions.md#authoring-takes-a-schema
+   * @see docs/options.md#a-key-that-refers-to-an-entity
    */
-  public function addSchema(string $key, Schema $schema): static;
+  public function add(string $key, Schema|string $schema, string|\Stringable|null $label = NULL, mixed $default = NULL): DataDefinition|static;
 
   /**
    * Rewords or arranges a key anyone declared.
@@ -269,7 +238,7 @@ interface BlueprintAdditionsInterface {
    * text emptied where the owner gave one is refused.
    *
    * @code
-   * $inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class, label: t('Punctuation'));
+   * $inputs->addEach('punctuation', Schema::of(PunctuationAction::class), from: PunctuationCharacters::class, label: t('Punctuation'));
    * $inputs->describe('punctuation', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
    * @endcode
    *
@@ -478,7 +447,7 @@ interface BlueprintAdditionsInterface {
    * @code
    * $inputs->narrow('capacity')
    *   ->when(Condition::absent('license'))
-   *   ->constrain('Range', ['max' => 100])
+   *   ->constrain(Schema::any()->maximum(100))
    *   ->because(t('Up to 100 without an event license.'));
    * @endcode
    *

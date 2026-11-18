@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface\Structure;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
@@ -42,18 +39,20 @@ final class StageChangesStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $item = self::write(t('Staged write'))
-      ->setPropertyDefinition('changed', ListDataDefinition::create('string')
-        ->setLabel(t('Changed'))
-        ->setDescription(t('The JSON Pointer of each top level key the stage moved, or the empty pointer "" for a delete, which takes the whole thing; apply sends the moved keys, and makes the delete.')))
-      ->setPropertyDefinition('staged', DataDefinition::create('timestamp')
-        ->setLabel(t('Staged'))
-        ->setDescription(t('When the first write to the thing was staged.'))
-        ->setRequired(TRUE));
-    $outputs->addList('items', $item, t('Staged writes'))
-      ->setDescription(t('Every write the stage holds, in the order apply will make them; empty when it holds none.'));
+    $outputs->add('items', Schema::list(self::write(t('Staged write'))
+      ->properties([
+        'changed' => Schema::list(Schema::string())
+          ->title(t('Changed'))
+          ->description(t('The JSON Pointer of each top level key the stage moved, or the empty pointer "" for a delete, which takes the whole thing; apply sends the moved keys, and makes the delete.')),
+        'staged' => Schema::of('portable:timestamp')
+          ->title(t('Staged'))
+          ->description(t('When the first write to the thing was staged.'))
+          ->required(),
+      ]))
+      ->title(t('Staged writes'))
+      ->description(t('Every write the stage holds, in the order apply will make them; empty when it holds none.')));
 
-    $outputs->addSchema('total', Schema::integer()
+    $outputs->add('total', Schema::integer()
       ->title(t('Total'))
       ->description(t('How many writes the stage holds.'))
       ->required());
@@ -62,35 +61,35 @@ final class StageChangesStructure implements StructureInterface, DefinesOutputsI
   /**
    * Declares what names one staged write: where, through what, to what.
    *
-   * Shared with what apply answers (StageAppliedStructure).
+   * Shared with what apply answers (StageAppliedStructure), which adds
+   * its own properties after these.
    *
    * @param \Drupal\Core\StringTranslation\TranslatableMarkup $label
-   *   The map's label.
+   *   The object's title.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   A map of the position, the resource, the operation, the kind and
+   * @return \PortableSchema\Builder\Schema
+   *   An object of the position, the resource, the operation, the kind and
    *   the parameters, each parameter's value as text.
    */
-  public static function write(TranslatableMarkup $label): MapDataDefinition {
-    $parameter = MapDataDefinition::create()
-      ->setLabel(t('Parameter'))
-      ->setPropertyDefinition('name', DataDefinition::create('string')->setLabel(t('Name'))->setRequired(TRUE))
-      ->setPropertyDefinition('value', DataDefinition::create('string')->setLabel(t('Value'))->setRequired(TRUE));
-    return MapDataDefinition::create()
-      ->setLabel($label)
-      ->setPropertyDefinition('position', DataDefinition::create('integer')
-        ->setLabel(t('Position'))
-        ->setDescription(t("Its place in the stage, from 1, the same for the stage's life."))
-        ->setRequired(TRUE))
-      ->setPropertyDefinition('resource', DataDefinition::create('string')->setLabel(t('Resource'))->setRequired(TRUE))
-      ->setPropertyDefinition('operation', DataDefinition::create('string')->setLabel(t('Operation'))->setRequired(TRUE))
-      ->setPropertyDefinition('kind', DataDefinition::create('string')
-        ->setLabel(t('Kind'))
-        ->setDescription(t('create, update or delete.'))
-        ->setRequired(TRUE))
-      ->setPropertyDefinition('parameters', (new ListDataDefinition([], $parameter))
-        ->setLabel(t('Parameters'))
-        ->setDescription(t("The operation's parameters that named the thing, each value as text; for a create, the local id the stage gave it (a negative integer) or the name the caller gave; empty for a thing with no identity.")));
+  public static function write(TranslatableMarkup $label): Schema {
+    return Schema::object([
+      'position' => Schema::integer()
+        ->title(t('Position'))
+        ->description(t("Its place in the stage, from 1, the same for the stage's life."))
+        ->required(),
+      'resource' => Schema::string()->title(t('Resource'))->required(),
+      'operation' => Schema::string()->title(t('Operation'))->required(),
+      'kind' => Schema::string()
+        ->title(t('Kind'))
+        ->description(t('create, update or delete.'))
+        ->required(),
+      'parameters' => Schema::list(Schema::object([
+        'name' => Schema::string()->title(t('Name'))->required(),
+        'value' => Schema::string()->title(t('Value'))->required(),
+      ])->title(t('Parameter')))
+        ->title(t('Parameters'))
+        ->description(t("The operation's parameters that named the thing, each value as text; for a create, the local id the stage gave it (a negative integer) or the name the caller gave; empty for a thing with no identity.")),
+    ])->title($label);
   }
 
 }

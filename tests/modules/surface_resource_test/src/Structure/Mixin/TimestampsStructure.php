@@ -30,10 +30,10 @@ final class TimestampsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('created', Schema::integer()
+    $inputs->add('created', Schema::integer()
       ->title(t('Created'))
       ->minimum(0));
-    $inputs->addSchema('changed', Schema::integer()
+    $inputs->add('changed', Schema::integer()
       ->title(t('Changed'))
       ->minimum(0));
     $inputs->narrow('changed')

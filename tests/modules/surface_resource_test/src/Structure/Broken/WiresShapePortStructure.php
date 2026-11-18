@@ -20,7 +20,7 @@ final class WiresShapePortStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('code', Schema::string()
+    $inputs->add('code', Schema::string()
       ->title('Code'));
     $inputs->attach('tag', ShelfTagStructure::class, reads: ['code' => 'code']);
   }

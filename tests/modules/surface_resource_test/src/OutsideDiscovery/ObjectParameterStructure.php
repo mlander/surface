@@ -32,7 +32,7 @@ final class ObjectParameterStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('jar', Schema::string()
+    $inputs->add('jar', Schema::string()
       ->title('Jar'));
   }
 

@@ -20,7 +20,7 @@ final class MountedShapeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('code', Schema::of(MountedShape::class)
+    $inputs->add('code', Schema::of(MountedShape::class)
       ->title('Code'));
   }
 

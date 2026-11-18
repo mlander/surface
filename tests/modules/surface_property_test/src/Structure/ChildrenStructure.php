@@ -24,11 +24,11 @@ final class ChildrenStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('public', Schema::bool()
+    $inputs->add('public', Schema::bool()
       ->title(t('Public'))
       ->default(FALSE));
 
-    $inputs->addSchema('pricing', Schema::string()
+    $inputs->add('pricing', Schema::string()
       ->title(t('Pricing'))
       ->default('free')
       ->required());

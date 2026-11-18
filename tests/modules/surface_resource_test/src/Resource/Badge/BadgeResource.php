@@ -32,11 +32,11 @@ final class BadgeResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('first', Schema::string()
+    $inputs->add('first', Schema::string()
       ->title(t('First name'))
       ->maxLength(10)
       ->required());
-    $inputs->addSchema('last', Schema::string()
+    $inputs->add('last', Schema::string()
       ->title(t('Last name')));
     $inputs->compute(
       'code',
@@ -63,7 +63,7 @@ final class BadgeResource implements ResourceInterface {
       using: MachineName::class,
       when: Compute::UNLESS_SENT,
     );
-    $inputs->addSchema('color', Schema::string()
+    $inputs->add('color', Schema::string()
       ->title(t('Color'))
       ->default('blue'));
   }

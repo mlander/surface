@@ -38,15 +38,15 @@ final class CabinetResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Label'))
       ->default('Cabinet'));
-    $inputs->addSchema('drawers', Schema::integer()
+    $inputs->add('drawers', Schema::integer()
       ->title(t('Drawers'))
       ->default(4)
       ->minimum(1)
       ->maximum(12));
-    $inputs->addSchema('lock', Schema::enum(['key', 'code'])
+    $inputs->add('lock', Schema::enum(['key', 'code'])
       ->title(t('Lock'))
       ->default('key'));
     $inputs->attachVariants('lock_settings', by: 'lock', label: t('Lock settings'));

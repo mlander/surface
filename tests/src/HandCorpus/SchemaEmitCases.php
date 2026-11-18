@@ -17,6 +17,7 @@ use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Data surfaces the emitter writes from schemas alone, built by hand.
@@ -251,9 +252,9 @@ final class SchemaEmitCases {
       'list' => (new ListDataDefinition([], MapDataDefinition::create()))->setLabel('List'),
     ]);
     $builder->attachList('list', new Collection(new Attachment((new SurfaceBuilder(['x' => DataDefinition::create('string')->setLabel('X')]))->seal())));
-    $name = (new Rule('name'))->when(Condition::equals('gate', 'a'))->constrain('Length', ['max' => 5])->because('Short under a.');
+    $name = (new Rule('name'))->when(Condition::equals('gate', 'a'))->constrain(Schema::any()->check('drupal:Length', ['max' => 5]))->because('Short under a.');
     $gone = (new Rule('gone'))->when(Condition::equals('gate', 'b'))->doesNotApply();
-    $list = (new Rule('list'))->when(Condition::equals('gate', 'c'))->constrain('Count', ['max' => 1]);
+    $list = (new Rule('list'))->when(Condition::equals('gate', 'c'))->constrain(Schema::any()->check('drupal:Count', ['max' => 1]));
     $rules = ['name' => [$name], 'gone' => [$gone], 'list' => [$list]];
     $link = new DeclaredRefiner($rules);
     foreach (array_keys($rules) as $key) {

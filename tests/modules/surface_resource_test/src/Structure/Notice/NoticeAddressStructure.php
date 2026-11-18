@@ -19,7 +19,7 @@ final class NoticeAddressStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('street', Schema::string()
+    $inputs->add('street', Schema::string()
       ->title('Street')
       ->required());
   }

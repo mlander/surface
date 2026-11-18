@@ -24,7 +24,7 @@ final class NorthVaultAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('vault_id', Schema::string()
+    $inputs->add('vault_id', Schema::string()
       ->title('Vault entry'));
     $inputs->resolve('token', from: ['vault_id'], using: VaultToken::class);
   }

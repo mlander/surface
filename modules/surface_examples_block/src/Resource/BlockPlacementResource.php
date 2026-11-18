@@ -95,7 +95,7 @@ final class BlockPlacementResource implements ResourceInterface {
    * so no door offers what the block's schema refuses.
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Title'))
       ->description(t('The title of the block as shown to the user.'))
       ->maxLength(255)
@@ -106,7 +106,7 @@ final class BlockPlacementResource implements ResourceInterface {
       ])
       ->required());
 
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title(t('Machine name'))
       ->description(t('A unique name for the placed block: lowercase letters, numbers, underscores and periods, not starting with a period.'))
       ->maxLength(166)
@@ -116,12 +116,12 @@ final class BlockPlacementResource implements ResourceInterface {
       ])
       ->required());
 
-    $inputs->addSchema('label_display', Schema::bool()
+    $inputs->add('label_display', Schema::bool()
       ->title(t('Display title'))
       ->description(t('Whether the title is shown above the block.'))
       ->default(TRUE));
 
-    $inputs->addSchema('plugin', Schema::string()
+    $inputs->add('plugin', Schema::string()
       ->title(t('Block'))
       ->description(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
       ->required());
@@ -134,7 +134,7 @@ final class BlockPlacementResource implements ResourceInterface {
       description: t('The settings of the block chosen, as its plugin declares them.'),
     );
 
-    $inputs->addSchema('theme', Schema::string()
+    $inputs->add('theme', Schema::string()
       ->title(t('Theme'))
       ->description(t('The theme the block is placed in.'))
       ->check('drupal:ExtensionExists', ['type' => 'theme'])
@@ -142,20 +142,20 @@ final class BlockPlacementResource implements ResourceInterface {
 
     // A region of any installed theme, until the theme narrows it to its
     // own: every door offers a list before a theme is chosen.
-    $inputs->addSchema('region', Schema::string()
+    $inputs->add('region', Schema::string()
       ->title(t('Region'))
       ->description(t('The region of the theme the block is shown in.'))
       ->check('drupal:SurfaceAnyThemeRegion')
       ->required());
 
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title(t('Weight'))
       ->description(t('The order of the block in its region: lighter blocks are shown first.'))
       ->default(0)
       ->minimum(-2147483648)
       ->maximum(2147483647));
 
-    $inputs->addSchema('status', Schema::bool()
+    $inputs->add('status', Schema::bool()
       ->title(t('Enabled'))
       ->description(t('Whether the block is shown at all.'))
       ->default(TRUE));

@@ -38,7 +38,7 @@ final class CampsiteResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->required());
     $inputs->attachList('pitches', PitchStructure::class, t('Pitches'));
