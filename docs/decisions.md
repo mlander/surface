@@ -16641,3 +16641,22 @@ as it is, and the validator refuses it with `type`, as `validate()` and
 `KeyPaths` refuse it: a refiner does not compute an answer for a value
 the same request then refuses, and every door reads the value by one
 rule. (`WatchedValueCheck::written()`)
+
+### ApplicableSchemas is held to the dialect by a test
+
+Decided 2026-11-17. A check that a keyword refuses at its place is left
+unasked (`ApplicableSchemas`). Until slice 34 a second run of the
+validator caught a keyword `ApplicableSchemas` read otherwise than the
+validator; since the fix of review S2 a check skipped inside an `anyOf`
+or `oneOf` branch causes no second run, so such a misreading in a branch
+went uncaught at run time. The fix stays, since a second run there asks
+checks on values of the wrong type, and a test takes the guard's place:
+`ApplicableSchemasVerdictTest` holds, at each place of each document of
+the contract baselines and of each case of the hand and door corpora,
+and of a hand set of branches of mixed types, the verdict of every
+schema that applies there, certain or in a branch, to the dialect's own
+errors for that schema over the keywords `ApplicableSchemas` reads. It
+costs no request time. A misread `maxLength` planted in a copy fails it.
+It found one disagreement, fixed: a PHP array whose keys are not 0 to
+n - 1 is a map to the validator, and `ApplicableSchemas` read it as a
+list, so a `type: object` there counted as a refusal.
