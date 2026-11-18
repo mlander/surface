@@ -27,7 +27,7 @@ final class ClayPotStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('glazed', Schema::bool()
+    $inputs->add('glazed', Schema::bool()
       ->title(t('Glazed'))
       ->default(FALSE));
   }

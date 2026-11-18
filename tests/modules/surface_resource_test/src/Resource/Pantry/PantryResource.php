@@ -47,10 +47,10 @@ final class PantryResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('pantry', Schema::string()
+    $inputs->add('pantry', Schema::string()
       ->title('Pantry')
       ->required());
-    $inputs->addSchema('kind', Schema::enum(['jar', 'tin'])
+    $inputs->add('kind', Schema::enum(['jar', 'tin'])
       ->title('Kind')
       ->default('jar'));
     $inputs->attach('shelf', ShelfStructure::class);

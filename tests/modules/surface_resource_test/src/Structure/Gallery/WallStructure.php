@@ -23,9 +23,9 @@ final class WallStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('artwork', Schema::string()
+    $inputs->add('artwork', Schema::string()
       ->title(t('Artwork')));
-    $inputs->addSchema('height', Schema::integer()
+    $inputs->add('height', Schema::integer()
       ->title(t('Height')));
   }
 

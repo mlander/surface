@@ -496,7 +496,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Declares a list whose items are a map with a check, with addSchema().
+   * Declares a list whose items are a map with a check, with add().
    *
    * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The blueprint.
@@ -506,7 +506,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
       ->title('Line')
       ->with('additionalProperties', FALSE)
       ->check('drupal:Callback', ['callback' => [static::class, 'refuseSeven']]);
-    $inputs->addSchema('k', Schema::list($item)->title('Lines')->required());
+    $inputs->add('k', Schema::list($item)->title('Lines')->required());
   }
 
   /**

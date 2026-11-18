@@ -62,7 +62,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * own structure, #[UsesStructure]
  * with no argument; and keys spelled with the Portable Schema package's
  * #[Of], #[Schema], #[Check], #[Ui] and #[Required], declared with
- * addSchema() (SchemaAttributesTest holds that spelling's own rules).
+ * add() (SchemaAttributesTest holds that spelling's own rules).
  *
  * The reader refuses what the verbs cannot know, each naming the class,
  * the property and the fix; what a verb refuses, the verb refuses.

@@ -19,7 +19,7 @@ final class AlterAttachTargetStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('layout', Schema::enum(['theatre', 'banquet', 'standing'])
+    $inputs->add('layout', Schema::enum(['theatre', 'banquet', 'standing'])
       ->title('Layout'));
   }
 

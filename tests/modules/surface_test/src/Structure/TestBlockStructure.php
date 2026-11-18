@@ -47,29 +47,29 @@ final class TestBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('headline', Schema::string()
+    $inputs->add('headline', Schema::string()
       ->title(t('Headline'))
       ->description(t('Shown above the items.'))
       ->default('Featured')
       ->maxLength(20)
       ->examples(['Quarterly report'])
       ->required());
-    $inputs->addSchema('limit', Schema::integer()
+    $inputs->add('limit', Schema::integer()
       ->title(t('Number of items'))
       ->default(10)
       ->minimum(1)
       ->maximum(50));
-    $inputs->addSchema('show_summary', Schema::bool()
+    $inputs->add('show_summary', Schema::bool()
       ->title(t('Show summaries'))
       ->default(TRUE));
-    $inputs->addSchema('casing', Schema::options([
+    $inputs->add('casing', Schema::options([
       'none' => t('As written'),
       'uppercase' => t('Upper case'),
       'lowercase' => t('Lower case'),
     ])
       ->title(t('Casing'))
       ->default('none'));
-    $inputs->addSchema('variant', Schema::string()
+    $inputs->add('variant', Schema::string()
       ->title(t('Variant'))
       ->description(t('Pick a casing other than none to see its variants.')));
   }

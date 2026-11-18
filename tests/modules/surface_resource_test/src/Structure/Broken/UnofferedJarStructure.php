@@ -21,7 +21,7 @@ final class UnofferedJarStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('size', Schema::integer()
+    $inputs->add('size', Schema::integer()
       ->title('Size'));
   }
 

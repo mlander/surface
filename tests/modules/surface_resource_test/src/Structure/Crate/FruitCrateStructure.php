@@ -30,10 +30,10 @@ final class FruitCrateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('fruit', Schema::string()
+    $inputs->add('fruit', Schema::string()
       ->title('Fruit')
       ->check('drupal:Choice', ['choices' => array_keys(self::LAYERS)]));
-    $inputs->addSchema('layers', Schema::integer()
+    $inputs->add('layers', Schema::integer()
       ->title('Layers')
       ->default(1)
       ->minimum(1)

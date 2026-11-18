@@ -26,11 +26,11 @@ final class AliasMountAlter implements AltersInputsInterface, AltersStorageLayou
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('reviewer', Schema::integer()
+    $inputs->add('reviewer', Schema::integer()
       ->title('Reviewer')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
 
-    $inputs->addSchema('delay', Schema::integer()
+    $inputs->add('delay', Schema::integer()
       ->title('Delay in minutes'));
   }
 

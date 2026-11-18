@@ -20,7 +20,7 @@ final class UncacheableVariantsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::string()
+    $inputs->add('kind', Schema::string()
       ->title('Kind'));
     $inputs->attachVariants('detail', by: 'kind', from: UncacheableLayouts::class);
   }

@@ -72,18 +72,18 @@ final class LedgerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title(t('Id'))
       ->required());
 
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->required());
 
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note')));
 
-    $inputs->addSchema('tags', Schema::list(Schema::string())
+    $inputs->add('tags', Schema::list(Schema::string())
       ->title(t('Tags')));
 
     $inputs->compute(

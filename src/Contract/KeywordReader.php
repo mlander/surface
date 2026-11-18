@@ -291,7 +291,7 @@ final class KeywordReader {
    *   where its schema is marked `required()`.
    * @param string|null $what
    *   Who was handed the schema, for the messages; NULL for
-   *   `addSchema("<key>")`.
+   *   `add("<key>")`.
    *
    * @return \Drupal\surface\Contract\KeywordRead|null
    *   The key's schema and the notes; NULL for a key this reader does not
@@ -303,7 +303,7 @@ final class KeywordReader {
    *   not read as written and does not accept.
    */
   public function read(string $key, Schema $schema, ?bool $required = NULL, ?string $what = NULL): ?KeywordRead {
-    $what ??= sprintf('addSchema("%s")', $key);
+    $what ??= sprintf('add("%s")', $key);
     if ($schema->isBoolean()) {
       throw new \InvalidArgumentException(sprintf('%s was handed the boolean schema %s, which says only whether a value is allowed: a key is the schema of what it holds, Schema::string(), Schema::integer(), Schema::of(\'portable:email\') and the like.', $what, $schema->toDocument() === TRUE ? 'true' : 'false'));
     }

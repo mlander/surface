@@ -40,7 +40,7 @@ final class OpeningHoursResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('opens', Schema::string()
+    $inputs->add('opens', Schema::string()
       ->title(t('Opens at'))
       ->description(t('HH:MM, on a 24-hour clock.'))
       ->default('09:00')
@@ -51,7 +51,7 @@ final class OpeningHoursResource implements ResourceInterface {
       ->ui(widget: 'time')
       ->required());
 
-    $inputs->addSchema('closes', Schema::integer()
+    $inputs->add('closes', Schema::integer()
       ->title(t('Closes at, in minutes after midnight'))
       ->description(t('Later than noon: 1020 is 17:00.'))
       ->default(1020)
@@ -68,20 +68,20 @@ final class OpeningHoursResource implements ResourceInterface {
       'sat' => t('Saturday'),
       'sun' => t('Sunday'),
     ]);
-    $inputs->addSchema('days', Schema::list($day)
+    $inputs->add('days', Schema::list($day)
       ->title(t('Days open'))
       ->default(['mon', 'tue', 'wed', 'thu', 'fri'])
       ->uniqueItems(TRUE)
       ->required());
 
-    $inputs->addSchema('notes', Schema::string()
+    $inputs->add('notes', Schema::string()
       ->title(t('Notes'))
       ->ui(widget: 'textarea'));
 
-    $inputs->addSchema('after_hours', Schema::bool()
+    $inputs->add('after_hours', Schema::bool()
       ->title(t('After-hours access'))
       ->default(FALSE));
-    $inputs->addSchema('door_code', Schema::string()
+    $inputs->add('door_code', Schema::string()
       ->title(t('Door code'))
       ->minLength(4)
       ->maxLength(12)
@@ -90,7 +90,7 @@ final class OpeningHoursResource implements ResourceInterface {
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $inputs->addSchema('late_days', Schema::list($day)
+    $inputs->add('late_days', Schema::list($day)
       ->title(t('After-hours days'))
       ->default([])
       ->check('drupal:Count', [
@@ -102,11 +102,11 @@ final class OpeningHoursResource implements ResourceInterface {
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $inputs->addSchema('keywords', Schema::list(Schema::string())
+    $inputs->add('keywords', Schema::list(Schema::string())
       ->title(t('Keywords'))
       ->default([]));
 
-    $inputs->addSchema('holidays', Schema::options([
+    $inputs->add('holidays', Schema::options([
       'closed' => t('Closed'),
       'reduced' => t('Reduced hours'),
       'open' => t('Open as usual'),

@@ -34,7 +34,7 @@ final class DigestResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('frequency', Schema::string()
+    $inputs->add('frequency', Schema::string()
       ->title('Frequency')
       ->default('weekly')
       ->required());

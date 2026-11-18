@@ -29,10 +29,10 @@ final class PlanterStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('code', Schema::of(Sku::class)
+    $inputs->add('code', Schema::of(Sku::class)
       ->title(t('Stock code')));
 
-    $inputs->addSchema('kind', Schema::string()
+    $inputs->add('kind', Schema::string()
       ->title(t('Kind'))
       ->default('clay'));
 

@@ -22,10 +22,10 @@ final class TinResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('opener', Schema::bool()
+    $inputs->add('opener', Schema::bool()
       ->title('Needs an opener')
       ->default(FALSE));
-    $inputs->addSchema('volume', Schema::integer()
+    $inputs->add('volume', Schema::integer()
       ->title('Volume')
       ->default(400)
       ->required());

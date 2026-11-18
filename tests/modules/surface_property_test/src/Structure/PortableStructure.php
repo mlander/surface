@@ -25,40 +25,40 @@ final class PortableStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $about = ArrangementGroup::fieldset('about', t('About'));
 
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->description(t('As printed on the badge.'))
       ->maxLength(64)
       ->required());
     $inputs->describe('name', group: $about, weight: 1, placeholder: t('Full name'));
 
-    $inputs->addSchema('email', Schema::string()->format('email')
+    $inputs->add('email', Schema::string()->format('email')
       ->title(t('Email'))
       ->maxLength(254));
 
-    $inputs->addSchema('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
+    $inputs->add('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
       ->title(t('Frequency'))
       ->default('weekly')
       ->required());
     $inputs->describe('frequency', group: $about);
 
-    $inputs->addSchema('code', Schema::of(Code::class)
+    $inputs->add('code', Schema::of(Code::class)
       ->title(t('Code')));
 
-    $inputs->addSchema('module', Schema::string()
+    $inputs->add('module', Schema::string()
       ->title(t('Module'))
       ->check('drupal:ExtensionExists', ['type' => 'module']));
 
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note'))
       ->ui(widget: 'textarea'));
 
-    $inputs->addSchema('tags', Schema::list(Schema::string()->maxLength(10))
+    $inputs->add('tags', Schema::list(Schema::string()->maxLength(10))
       ->title(t('Tags'))
       ->default([])
       ->maxItems(5));
 
-    $inputs->addSchema('count', Schema::integer()
+    $inputs->add('count', Schema::integer()
       ->title(t('Count'))
       ->default(3)
       ->minimum(1)

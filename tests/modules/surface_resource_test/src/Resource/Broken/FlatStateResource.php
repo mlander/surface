@@ -21,7 +21,7 @@ final class FlatStateResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::string()
+    $inputs->add('kind', Schema::string()
       ->title('Kind'));
     $inputs->attachVariants('gear', by: 'kind', label: 'Gear', storedAs: Variants::FLAT);
   }

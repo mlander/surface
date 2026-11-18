@@ -21,9 +21,9 @@ final class TakesDefinitionStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::string()
+    $inputs->add('kind', Schema::string()
       ->title('Kind'));
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title('Name'));
   }
 

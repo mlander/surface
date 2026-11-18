@@ -20,7 +20,7 @@ final class MixinUnwiredStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('visibility', Schema::string()
+    $inputs->add('visibility', Schema::string()
       ->title('Visibility'));
     $inputs->mixIn(OwnershipStructure::class);
   }

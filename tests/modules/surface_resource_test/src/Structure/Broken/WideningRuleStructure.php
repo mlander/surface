@@ -20,9 +20,9 @@ final class WideningRuleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('mode', Schema::string()
+    $inputs->add('mode', Schema::string()
       ->title('Mode'));
-    $inputs->addSchema('count', Schema::integer()
+    $inputs->add('count', Schema::integer()
       ->title('Count')
       ->minimum(1)
       ->maximum(10));

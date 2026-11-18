@@ -39,17 +39,17 @@ final class ProgramResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('headline', Schema::string()
+    $inputs->add('headline', Schema::string()
       ->title(t('Headline'))
       ->required());
 
-    $inputs->addSchema('sessions', Schema::integer()
+    $inputs->add('sessions', Schema::integer()
       ->title(t('Sessions'))
       ->default(8)
       ->minimum(1)
       ->maximum(30));
 
-    $inputs->addSchema('published', Schema::bool()
+    $inputs->add('published', Schema::bool()
       ->title(t('Published'))
       ->default(FALSE));
 

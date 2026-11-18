@@ -30,11 +30,11 @@ final class VaultNoteResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Label'))
       ->default(''));
 
-    $inputs->addSchema('token', Schema::string()
+    $inputs->add('token', Schema::string()
       ->title(t('Token'))
       ->default('')
       ->writeOnly(TRUE));

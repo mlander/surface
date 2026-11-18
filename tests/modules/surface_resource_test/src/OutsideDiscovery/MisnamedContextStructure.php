@@ -31,7 +31,7 @@ final class MisnamedContextStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('jam', Schema::string()
+    $inputs->add('jam', Schema::string()
       ->title('Jam'));
   }
 

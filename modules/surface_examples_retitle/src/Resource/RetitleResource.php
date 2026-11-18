@@ -47,7 +47,7 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
       required: TRUE,
     );
 
-    $inputs->addSchema('style', Schema::options(TitleRewriter::styles())->type('string')
+    $inputs->add('style', Schema::options(TitleRewriter::styles())->type('string')
       ->title(t('Style'))
       ->description(t('How the title of a node sent no new title is rewritten.'))
       ->default(TitleRewriter::TITLE));
@@ -57,7 +57,7 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('titles', Schema::list(Schema::object([
+    $outputs->add('titles', Schema::list(Schema::object([
       'node' => Schema::integer()->title(t('Node'))->required(),
       'old' => Schema::string()->title(t('Old title'))->required(),
       'new' => Schema::string()->title(t('New title'))->required(),

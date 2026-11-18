@@ -22,7 +22,7 @@ final class CotStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('length', Schema::integer()
+    $inputs->add('length', Schema::integer()
       ->title(t('Length'))
       ->minimum(0));
   }

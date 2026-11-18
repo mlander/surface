@@ -35,12 +35,12 @@ final class MyColorsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('link_color', Schema::of(HexColor::class)
+    $inputs->add('link_color', Schema::of(HexColor::class)
       ->title(t('Link color'))
       ->default('#0969DA')
       ->required());
 
-    $inputs->addSchema('background_color', Schema::of(HexColor::class)
+    $inputs->add('background_color', Schema::of(HexColor::class)
       ->title(t('Background color'))
       ->default('#FFFFFF')
       ->required());

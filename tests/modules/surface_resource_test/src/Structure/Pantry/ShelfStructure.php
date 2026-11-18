@@ -25,11 +25,11 @@ final class ShelfStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('unit', Schema::string()
+    $inputs->add('unit', Schema::string()
       ->title('Unit')
       ->default('cm')
       ->check('drupal:Choice', ['choices' => array_keys(self::MAX)]));
-    $inputs->addSchema('height', Schema::integer()
+    $inputs->add('height', Schema::integer()
       ->title('Height')
       ->default(30)
       ->minimum(1));

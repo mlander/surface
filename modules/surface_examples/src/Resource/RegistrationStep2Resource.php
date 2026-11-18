@@ -44,25 +44,25 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema(self::TITLE, Schema::string()
+    $inputs->add(self::TITLE, Schema::string()
       ->title(t('Event title'))
       ->required());
 
-    $inputs->addSchema(self::OPEN, Schema::bool()
+    $inputs->add(self::OPEN, Schema::bool()
       ->title(t('Registration open'))
       ->default(TRUE));
 
-    $inputs->addSchema(self::VENUE, Schema::string()
+    $inputs->add(self::VENUE, Schema::string()
       ->title(t('Venue'))
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
       ->required());
 
-    $inputs->addSchema(self::ROOM, Schema::string()
+    $inputs->add(self::ROOM, Schema::string()
       ->title(t('Room'))
       ->check('drupal:EventVenueRoom')
       ->required());
 
-    $inputs->addSchema(self::CAPACITY, Schema::integer()
+    $inputs->add(self::CAPACITY, Schema::integer()
       ->title(t('Capacity'))
       ->default(50)
       ->minimum(1));

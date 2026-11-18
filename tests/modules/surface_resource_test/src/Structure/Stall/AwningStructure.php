@@ -25,9 +25,9 @@ final class AwningStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addMap('shade', t('Shade'), static function (BlueprintInterface $shade): void {
-      $shade->addSchema('kind', Schema::string()
+      $shade->add('kind', Schema::string()
         ->title(t('Kind')));
-      $shade->addSchema('width', Schema::integer()
+      $shade->add('width', Schema::integer()
         ->title(t('Width')));
       $shade->narrow('width')
         ->when(Condition::equals('kind', 'wide'))

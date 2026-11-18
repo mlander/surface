@@ -134,8 +134,14 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
-    $definition = DataDefinition::create($type)->setLabel($label);
+  public function add(string $key, Schema|string $schema, string|\Stringable|null $label = NULL, mixed $default = NULL): DataDefinition|static {
+    if ($schema instanceof Schema) {
+      // Read into this blueprint, so the verbs the schema stands for are
+      // written down.
+      SchemaReader::authored($this, $key, $schema);
+      return $this;
+    }
+    $definition = DataDefinition::create($schema)->setLabel($label ?? '');
     $this->record($key, 'add', $definition, ['default' => $default]);
     return $definition;
   }
@@ -166,17 +172,6 @@ final class RecordingBlueprint implements BlueprintInterface {
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
     return $this->record($key, 'addDefinition', $definition, ['default' => $default]);
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * Read into this blueprint, so the verbs the schema stands for are
-   * written down.
-   */
-  public function addSchema(string $key, Schema $schema): static {
-    SchemaReader::authored($this, $key, $schema);
-    return $this;
   }
 
   /**

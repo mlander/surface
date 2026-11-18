@@ -35,22 +35,22 @@ final class InfoDeskResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('phone', Schema::of(PhoneNumber::class)
+    $inputs->add('phone', Schema::of(PhoneNumber::class)
       ->title(t('Desk phone'))
       ->required());
 
-    $inputs->addSchema('in_program', Schema::bool()
+    $inputs->add('in_program', Schema::bool()
       ->title(t('Listed in the printed program'))
       ->default(FALSE));
 
     // A pair only the desk holds: an anonymous map, written inline.
     $inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
-      $location->addSchema('lat', Schema::number()
+      $location->add('lat', Schema::number()
         ->title(t('Latitude'))
         ->default(43.6532)
         ->minimum(-90)
         ->maximum(90));
-      $location->addSchema('lng', Schema::number()
+      $location->add('lng', Schema::number()
         ->title(t('Longitude'))
         ->default(-79.3832)
         ->minimum(-180)

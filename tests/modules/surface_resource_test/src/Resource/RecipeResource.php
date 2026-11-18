@@ -68,25 +68,25 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kitchen', Schema::string()
+    $inputs->add('kitchen', Schema::string()
       ->title('Kitchen')
       ->required());
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title('Name')
       ->required());
-    $inputs->addSchema('course', Schema::string()
+    $inputs->add('course', Schema::string()
       ->title('Course')
       ->default('main')
       ->check('drupal:Choice', ['choices' => array_keys(self::DISHES)]));
-    $inputs->addSchema('dish', Schema::string()
+    $inputs->add('dish', Schema::string()
       ->title('Dish')
       ->check('drupal:Choice', ['choices' => array_merge(...array_values(self::DISHES))]));
-    $inputs->addSchema('servings', Schema::integer()
+    $inputs->add('servings', Schema::integer()
       ->title('Servings')
       ->default(2)
       ->minimum(1)
       ->maximum(12));
-    $inputs->addSchema('vegetarian', Schema::bool()
+    $inputs->add('vegetarian', Schema::bool()
       ->title('Vegetarian')
       ->default(FALSE));
   }
@@ -95,7 +95,7 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('id', Schema::string()
+    $outputs->add('id', Schema::string()
       ->title('Recipe id'));
   }
 

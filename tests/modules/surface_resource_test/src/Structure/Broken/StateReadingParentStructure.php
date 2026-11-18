@@ -19,7 +19,7 @@ final class StateReadingParentStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title('Title'));
     $inputs->attach('child', StateReadingStructure::class);
   }

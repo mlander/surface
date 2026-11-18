@@ -26,11 +26,11 @@ final class NoticeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('channel', Schema::enum(['post', 'email'])
+    $inputs->add('channel', Schema::enum(['post', 'email'])
       ->title('Channel')
       ->default('post')
       ->required());
-    $inputs->addSchema('cadence', Schema::string()
+    $inputs->add('cadence', Schema::string()
       ->title('Cadence')
       ->default('daily')
       ->required());

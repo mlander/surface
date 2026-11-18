@@ -20,9 +20,9 @@ final class MistypedConditionStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('count', Schema::integer()
+    $inputs->add('count', Schema::integer()
       ->title('Count'));
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title('Name'));
     $inputs->narrow('name')
       ->when(Condition::equals('count', '5'))

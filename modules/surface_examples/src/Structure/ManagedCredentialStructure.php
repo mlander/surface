@@ -27,7 +27,7 @@ final class ManagedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('key_id', Schema::string()
+    $inputs->add('key_id', Schema::string()
       ->title(t('Key'))
       ->description(t('A key the site manages; its value is read where it is used, never stored here.'))
       ->check('drupal:ManagedKey')

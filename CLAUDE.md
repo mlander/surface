@@ -133,7 +133,7 @@ the record of the rework that brought the module to the pattern.
   spelling, never a second contract, either per class, never both
   (example 18,
   `docs/decisions.md#a-class-may-declare-its-keys-as-properties`). A key
-  may also be stated as a Portable Schema, `addSchema(key, Schema,
+  may also be stated as a Portable Schema, `add(key, Schema,
   required:)`, read by the schema reader as the author's own
   (`SchemaReader::authored()`: a `drupal:` check the constraint it names,
   an optional key with a default clearable), or, on a property, with the

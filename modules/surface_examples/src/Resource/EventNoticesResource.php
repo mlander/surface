@@ -32,13 +32,13 @@ final class EventNoticesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('banner', Schema::string()
+    $inputs->add('banner', Schema::string()
       ->title(t('Banner'))
       ->default('')
       ->maxLength(500)
       ->ui(widget: 'textarea'));
 
-    $inputs->addSchema('show_banner', Schema::bool()
+    $inputs->add('show_banner', Schema::bool()
       ->title(t('Show the banner'))
       ->default(FALSE));
   }

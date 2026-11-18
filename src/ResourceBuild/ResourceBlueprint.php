@@ -677,7 +677,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The document's hash (documentHash()), when the caller took it
    *   already; NULL to take it here.
    * @param bool $authored
-   *   TRUE for a structure of a schema an author handed addSchema(), read
+   *   TRUE for a structure of a schema an author handed add(), read
    *   as the author's own (SchemaReader::authored()).
    *
    * @return string
@@ -1197,7 +1197,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     $computed = new Computed($from, $using, $when);
     if ($type instanceof Schema) {
       // The key as a schema: declared complete, then marked computed.
-      $this->addSchema($key, $type);
+      $this->add($key, $type);
       if (!$this->builder->writeSchema($key, static fn (array $facts): array => ['surface_computed' => $computed] + $facts)) {
         $definition = $this->builder->getDefinition($key);
         assert($definition !== NULL);

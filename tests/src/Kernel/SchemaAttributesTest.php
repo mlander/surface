@@ -39,7 +39,7 @@ use PortableSchema\Builder\Attribute\Ui;
  * The structure property_test.portable.properties spells each key of
  * property_test.portable with #[Of], #[Schema], #[Check], #[Ui] and
  * #[Required]: each property's schema is built by the package's rules
- * and declared with addSchema(), and both emit the same documents, byte
+ * and declared with add(), and both emit the same documents, byte
  * for byte. A key is spelled one way, and a class declares its groups one
  * way.
  *

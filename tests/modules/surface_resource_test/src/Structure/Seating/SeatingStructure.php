@@ -34,20 +34,20 @@ final class SeatingStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('layout', Schema::string()->required());
     $inputs->reads('guests', Schema::integer());
-    $inputs->addSchema('rows', Schema::integer()
+    $inputs->add('rows', Schema::integer()
       ->title(t('Rows'))
       ->default(5)
       ->minimum(1)
       ->maximum(40)
       ->required());
-    $inputs->addSchema('aisle', Schema::options([
+    $inputs->add('aisle', Schema::options([
       'centre' => t('Centre'),
       'side' => t('Side'),
       'none' => t('None'),
     ])
       ->title(t('Aisle'))
       ->required());
-    $inputs->addSchema('ushers', Schema::integer()
+    $inputs->add('ushers', Schema::integer()
       ->title(t('Ushers'))
       ->default(0)
       ->minimum(0)

@@ -308,7 +308,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
         $this->assertSame($message, $e->getMessage());
       }
     }
-    // A boolean schema holds no keys, as addSchema() refuses it.
+    // A boolean schema holds no keys, as add() refuses it.
     $boolean = [
       'SiteList::add("two") was handed the boolean schema false, which says only whether a value is allowed: a variant is the schema of what it holds, Schema::object() with its properties and the like.' => static fn () => $list->add('two', 'Two', schema: Schema::boolean(FALSE)),
       'SiteList::addDefs() for the def "any" was handed the boolean schema true, which says only whether a value is allowed: a variant is the schema of what it holds, Schema::object() with its properties and the like.' => static fn () => $list->addDefs(['any' => Schema::boolean(TRUE)]),

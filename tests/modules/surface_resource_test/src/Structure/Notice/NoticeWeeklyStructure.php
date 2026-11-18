@@ -21,7 +21,7 @@ final class NoticeWeeklyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('day', Schema::enum(['monday', 'friday'])
+    $inputs->add('day', Schema::enum(['monday', 'friday'])
       ->title('Day')
       ->default('monday')
       ->required());

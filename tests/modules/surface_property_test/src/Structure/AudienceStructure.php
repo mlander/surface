@@ -22,7 +22,7 @@ final class AudienceStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('audience', Schema::string());
 
-    $inputs->addSchema('reviewer', Schema::string()
+    $inputs->add('reviewer', Schema::string()
       ->title(t('Reviewer')));
 
     $inputs->narrow('reviewer')

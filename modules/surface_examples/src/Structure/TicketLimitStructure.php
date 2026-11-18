@@ -24,13 +24,13 @@ final class TicketLimitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('per_order', Schema::integer()
+    $inputs->add('per_order', Schema::integer()
       ->title(t('Per order'))
       ->default(4)
       ->minimum(1)
       ->maximum(10));
 
-    $inputs->addSchema('waiting_list', Schema::bool()
+    $inputs->add('waiting_list', Schema::bool()
       ->title(t('Waiting list when sold out'))
       ->default(FALSE));
 

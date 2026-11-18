@@ -39,7 +39,7 @@ final class StageChangesStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('items', Schema::list(self::write(t('Staged write'))
+    $outputs->add('items', Schema::list(self::write(t('Staged write'))
       ->properties([
         'changed' => Schema::list(Schema::string())
           ->title(t('Changed'))
@@ -52,7 +52,7 @@ final class StageChangesStructure implements StructureInterface, DefinesOutputsI
       ->title(t('Staged writes'))
       ->description(t('Every write the stage holds, in the order apply will make them; empty when it holds none.')));
 
-    $outputs->addSchema('total', Schema::integer()
+    $outputs->add('total', Schema::integer()
       ->title(t('Total'))
       ->description(t('How many writes the stage holds.'))
       ->required());

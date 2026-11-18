@@ -40,15 +40,15 @@ final class HallResource implements ResourceInterface {
       'banquet' => t('Banquet'),
       'standing' => t('Standing'),
     ];
-    $inputs->addSchema('arrangement', Schema::options($layouts)->type('string')
+    $inputs->add('arrangement', Schema::options($layouts)->type('string')
       ->title(t('Arrangement'))
       ->default('banquet')
       ->required());
-    $inputs->addSchema('style', Schema::options($layouts)->type('string')
+    $inputs->add('style', Schema::options($layouts)->type('string')
       ->title(t('Overflow style'))
       ->default('theatre')
       ->required());
-    $inputs->addSchema('guests', Schema::integer()
+    $inputs->add('guests', Schema::integer()
       ->title(t('Guests'))
       ->default(200)
       ->minimum(1)

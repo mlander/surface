@@ -110,11 +110,11 @@ final class StageResource implements ResourceInterface, DefinesOutputsInterface 
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('id', Schema::string()
+    $inputs->add('id', Schema::string()
       ->title(t('Stage id'))
       ->description(t('Given by storage when the stage is opened.')));
 
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Label'))
       ->description(t('What the stage is for; shown by a listing and a confirmation page.'))
       ->maxLength(255));
@@ -124,7 +124,7 @@ final class StageResource implements ResourceInterface, DefinesOutputsInterface 
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('id', Schema::string()
+    $outputs->add('id', Schema::string()
       ->title(t('Stage id'))
       ->description(t('The stage written; none once it is discarded.')));
   }

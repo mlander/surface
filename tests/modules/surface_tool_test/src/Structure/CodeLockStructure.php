@@ -23,7 +23,7 @@ final class CodeLockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('digits', Schema::integer()
+    $inputs->add('digits', Schema::integer()
       ->title(t('Digits'))
       ->default(4)
       ->minimum(3)

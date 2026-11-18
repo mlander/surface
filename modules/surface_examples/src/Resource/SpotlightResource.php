@@ -36,7 +36,7 @@ final class SpotlightResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('component', Schema::string()
+    $inputs->add('component', Schema::string()
       ->title(t('Component'))
       ->default('surface_examples:card')
       ->required());

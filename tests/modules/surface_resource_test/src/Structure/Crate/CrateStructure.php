@@ -22,7 +22,7 @@ final class CrateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('contents', Schema::string()
+    $inputs->add('contents', Schema::string()
       ->title('Contents')
       ->default('fruit')
       ->required());

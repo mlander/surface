@@ -27,13 +27,13 @@ final class DaypackStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('capacity', Schema::integer()
+    $inputs->add('capacity', Schema::integer()
       ->title(t('Volume'))
       ->description(t('In liters.'))
       ->minimum(10));
 
     $inputs->addMap('cover', t('Rain cover'), static function (BlueprintInterface $cover): void {
-      $cover->addSchema('color', Schema::string()
+      $cover->add('color', Schema::string()
         ->title(t('Color')));
       $cover->attach('pouch', PocketStructure::class, t('Pouch'));
     });

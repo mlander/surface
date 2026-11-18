@@ -251,7 +251,7 @@ A value asked for at more than one key, with the same type, the same
 pattern and the same words for it, is declared once as a **shape**: a
 class in the module's `src/Shape/` carrying `#[Shape]`, whose static
 `schema()` returns the Portable Schema of one value, read as
-`addSchema()` reads one ([A key stated as a schema](#declared-as-a-schema)).
+`add()` reads one ([A key stated as a schema](#declared-as-a-schema)).
 The examples' event license:
 
 ```php
@@ -538,23 +538,23 @@ holds the two to the same documents
 ## Declared as a Schema
 
 A key may be stated as a Portable Schema, the dialect the served
-document is written in, beside the Typed Data spelling. `addSchema()`
+document is written in, beside the Typed Data spelling. `add()`
 takes the key and a `PortableSchema\Builder\Schema`; the module reads it
 into the same verbs `add()`, `addList()` and `addMap()` are, so the key
 is a definition like any other. Example 1, whole:
 
 ```php
 public static function defineInputs(BlueprintInterface $inputs): void {
-  $inputs->addSchema(self::TITLE, Schema::string()
+  $inputs->add(self::TITLE, Schema::string()
     ->title(t('Event title')));
 
-  $inputs->addSchema(self::CAPACITY, Schema::integer()
+  $inputs->add(self::CAPACITY, Schema::integer()
     ->title(t('Capacity'))
     ->minimum(1)
     ->maximum(1000)
     ->default(50));
 
-  $inputs->addSchema(self::OPEN, Schema::bool()
+  $inputs->add(self::OPEN, Schema::bool()
     ->title(t('Registration open'))
     ->default(TRUE));
 }
@@ -579,7 +579,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   package's spelling of `?int`, is an optional integer; so is the same
   union of an enum, an object or a type of the library.
 - **What is not read is refused.** A part of the schema the module does
-  not read as written is the author's to fix, so `addSchema()` throws,
+  not read as written is the author's to fix, so `add()` throws,
   naming each part by its pointer: an unknown widget, a message for no
   constraint, a format on a type that is no string. A link is dropped,
   and a check the site cannot run is kept for the server to answer as

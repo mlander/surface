@@ -32,9 +32,9 @@ final class FickleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::enum(['small', 'large'])
+    $inputs->add('kind', Schema::enum(['small', 'large'])
       ->title('Kind'));
-    $inputs->addSchema('size', Schema::integer()
+    $inputs->add('size', Schema::integer()
       ->title('Size'));
   }
 

@@ -20,7 +20,7 @@ final class FieldStorageDirectStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('type', Schema::enum(['decimal', 'entity_reference', 'string'])
+    $inputs->add('type', Schema::enum(['decimal', 'entity_reference', 'string'])
       ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'type', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [

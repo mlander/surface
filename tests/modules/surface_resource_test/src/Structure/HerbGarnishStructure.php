@@ -22,7 +22,7 @@ final class HerbGarnishStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('chopped', Schema::bool()
+    $inputs->add('chopped', Schema::bool()
       ->title('Chopped')
       ->default(TRUE));
   }

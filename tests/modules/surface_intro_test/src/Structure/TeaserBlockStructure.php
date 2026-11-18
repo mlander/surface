@@ -24,12 +24,12 @@ final class TeaserBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('headline', Schema::string()
+    $inputs->add('headline', Schema::string()
       ->title(t('Headline'))
       ->default('Featured content')
       ->maxLength(50)
       ->required());
-    $inputs->addSchema('limit', Schema::integer()
+    $inputs->add('limit', Schema::integer()
       ->title(t('Number of items'))
       ->default(10)
       ->minimum(1)

@@ -20,7 +20,7 @@ final class WideningShapeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('sku', Schema::of(Sku::class)
+    $inputs->add('sku', Schema::of(Sku::class)
       ->title('Stock code')
       ->check('drupal:Length', ['max' => 40]));
   }

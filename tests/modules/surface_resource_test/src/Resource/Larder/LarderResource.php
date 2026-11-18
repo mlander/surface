@@ -81,10 +81,10 @@ final class LarderResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('larder', Schema::string()
+    $inputs->add('larder', Schema::string()
       ->title('Larder')
       ->required());
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title('Note'));
     $inputs->attach('rack', SpiceRackResource::class, 'Spice rack');
     $inputs->attach('spare_rack', SpiceRackResource::class, 'Spare spice rack');

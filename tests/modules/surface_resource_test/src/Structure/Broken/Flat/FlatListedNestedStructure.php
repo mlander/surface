@@ -24,7 +24,7 @@ final class FlatListedNestedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::string()
+    $inputs->add('kind', Schema::string()
       ->title('Kind'));
     $inner = ['a', FlatListedInnerStructure::class];
     $inputs->attachVariants(

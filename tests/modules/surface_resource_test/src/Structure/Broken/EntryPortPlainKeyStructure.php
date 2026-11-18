@@ -21,7 +21,7 @@ final class EntryPortPlainKeyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('layout', Schema::string()
+    $inputs->add('layout', Schema::string()
       ->title('Layout'));
     $inputs->attachEach('seats', SeatingStructure::class, from: WorkshopBenches::class, reads: ['layout' => 'layout']);
   }

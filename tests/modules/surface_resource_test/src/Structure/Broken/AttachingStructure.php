@@ -19,7 +19,7 @@ final class AttachingStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('type', Schema::string()
+    $inputs->add('type', Schema::string()
       ->title('Type'));
     $inputs->attachVariants('settings', by: 'type');
   }

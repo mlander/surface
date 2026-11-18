@@ -34,17 +34,17 @@ final class MailerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('sender', Schema::string()->format('email')
+    $inputs->add('sender', Schema::string()->format('email')
       ->title(t('Sender'))
       ->default('tickets@example.com')
       ->required());
 
-    $inputs->addSchema('endpoint', Schema::string()->format('uri')
+    $inputs->add('endpoint', Schema::string()->format('uri')
       ->title(t('Mail service'))
       ->default('https://mail.example.com/v1/send')
       ->required());
 
-    $inputs->addSchema('source', Schema::string()
+    $inputs->add('source', Schema::string()
       ->title(t('Credential source'))
       ->default('pasted')
       ->required());

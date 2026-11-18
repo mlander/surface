@@ -26,12 +26,12 @@ final class MapsStructure implements StructureInterface {
       'coordinates',
       t('Coordinates'),
       static function (BlueprintInterface $map): void {
-        $map->addSchema('lat', Schema::number()
+        $map->add('lat', Schema::number()
           ->title(t('Latitude'))
           ->minimum(-90)
           ->maximum(90)
           ->required());
-        $map->addSchema('lng', Schema::number()
+        $map->add('lng', Schema::number()
           ->title(t('Longitude'))
           ->minimum(-180)
           ->maximum(180)
@@ -41,7 +41,7 @@ final class MapsStructure implements StructureInterface {
     );
 
     $inputs->addMap('booking', t('Booking'), static function (BlueprintInterface $map): void {
-      $map->addSchema('seats', Schema::integer()
+      $map->add('seats', Schema::integer()
         ->title(t('Seats'))
         ->default(1));
       $map->attach('row', EntryStructure::class, t('Row'));

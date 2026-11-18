@@ -29,12 +29,12 @@ final class PaidTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('price', Schema::number()
+    $inputs->add('price', Schema::number()
       ->title(t('Price'))
       ->minimum(0.01)
       ->required());
 
-    $inputs->addSchema('currency', Schema::enum(['EUR', 'GBP', 'USD'])
+    $inputs->add('currency', Schema::enum(['EUR', 'GBP', 'USD'])
       ->title(t('Currency'))
       ->default('EUR')
       ->required());

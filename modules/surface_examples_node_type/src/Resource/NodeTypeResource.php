@@ -107,7 +107,7 @@ final class NodeTypeResource implements ResourceInterface {
     $display = ArrangementGroup::details('display', t('Display settings'), collapsed: TRUE);
 
     // The content type.
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->description(t('The human readable name for this content type.'))
       ->maxLength(255)
@@ -129,7 +129,7 @@ final class NodeTypeResource implements ResourceInterface {
       when: Compute::UNLESS_SENT,
     );
 
-    $inputs->addSchema('description', Schema::string()
+    $inputs->add('description', Schema::string()
       ->title(t('Description'))
       ->description(t('Displays on the Content types page.'))
       ->check('drupal:Regex', [
@@ -140,7 +140,7 @@ final class NodeTypeResource implements ResourceInterface {
       ->ui(widget: 'textarea'));
 
     // Submission form.
-    $inputs->addSchema('title_label', Schema::string()
+    $inputs->add('title_label', Schema::string()
       ->title(t('Title field label'))
       ->description(t('The label shown for the title field on the content form.'))
       ->default('Title')
@@ -148,14 +148,14 @@ final class NodeTypeResource implements ResourceInterface {
       ->required());
     $inputs->describe('title_label', group: $submission);
 
-    $inputs->addSchema('preview_mode', Schema::integer()
+    $inputs->add('preview_mode', Schema::integer()
       ->title(t('Preview before submitting'))
       ->default(NodePreviewMode::Optional->value)
       ->check('drupal:LabeledChoice', ['labels' => NodePreviewMode::asOptions()])
       ->required());
     $inputs->describe('preview_mode', group: $submission);
 
-    $inputs->addSchema('help', Schema::string()
+    $inputs->add('help', Schema::string()
       ->title(t('Explanation or submission guidelines'))
       ->description(t('Displayed at the top of the page when creating or editing content of this type.'))
       ->check('drupal:Regex', [
@@ -167,32 +167,32 @@ final class NodeTypeResource implements ResourceInterface {
     $inputs->describe('help', group: $submission);
 
     // Defaults of new content, kept on the node base fields.
-    $inputs->addSchema('status', Schema::bool()
+    $inputs->add('status', Schema::bool()
       ->title(t('Published'))
       ->description(t('Whether new content of this type is published by default.'))
       ->default(TRUE));
     $inputs->describe('status', group: $workflow);
 
-    $inputs->addSchema('promote', Schema::bool()
+    $inputs->add('promote', Schema::bool()
       ->title(t('Promoted to front page'))
       ->description(t('Whether new content of this type is promoted by default.'))
       ->default(FALSE));
     $inputs->describe('promote', group: $workflow);
 
-    $inputs->addSchema('sticky', Schema::bool()
+    $inputs->add('sticky', Schema::bool()
       ->title(t('Sticky at top of lists'))
       ->description(t('Whether new content of this type is sticky by default.'))
       ->default(FALSE));
     $inputs->describe('sticky', group: $workflow);
 
-    $inputs->addSchema('new_revision', Schema::bool()
+    $inputs->add('new_revision', Schema::bool()
       ->title(t('Create new revision'))
       ->description(t('Whether edits create a new revision by default.'))
       ->default(TRUE));
     $inputs->describe('new_revision', group: $workflow);
 
     // Display.
-    $inputs->addSchema('display_submitted', Schema::bool()
+    $inputs->add('display_submitted', Schema::bool()
       ->title(t('Display author and date information'))
       ->description(t('Author username and publish date will be displayed.'))
       ->default(TRUE));

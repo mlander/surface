@@ -25,20 +25,20 @@ final class KioskStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('licensed', Schema::bool()
+    $inputs->add('licensed', Schema::bool()
       ->title('Licensed')
       ->default(FALSE));
-    $inputs->addSchema('capacity', Schema::integer()
+    $inputs->add('capacity', Schema::integer()
       ->title('Capacity')
       ->minimum(1)
       ->maximum(1000));
-    $inputs->addSchema('queue', Schema::integer()
+    $inputs->add('queue', Schema::integer()
       ->title('Queue')
       ->check('drupal:Range', ['max' => 10, 'maxMessage' => 'A queue holds ten at most.']));
-    $inputs->addSchema('code', Schema::string()
+    $inputs->add('code', Schema::string()
       ->title('Code')
       ->maxLength(12));
-    $inputs->addSchema('days', Schema::list(Schema::enum(['mon', 'tue']))
+    $inputs->add('days', Schema::list(Schema::enum(['mon', 'tue']))
       ->title('Days')
       ->default([]));
 

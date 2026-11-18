@@ -30,10 +30,10 @@ final class VaultResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('endpoint', Schema::string()
+    $inputs->add('endpoint', Schema::string()
       ->title(t('Endpoint'))
       ->default(''));
-    $inputs->addSchema('token', Schema::string()
+    $inputs->add('token', Schema::string()
       ->title(t('API key'))
       ->default('')
       ->writeOnly(TRUE));

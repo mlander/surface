@@ -19,9 +19,9 @@ final class PortCycleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('layout', Schema::enum(['theatre', 'banquet', 'standing'])
+    $inputs->add('layout', Schema::enum(['theatre', 'banquet', 'standing'])
       ->title('Layout'));
-    $inputs->addSchema('size', Schema::integer()
+    $inputs->add('size', Schema::integer()
       ->title('Size')
       ->default(50)
       ->minimum(1)

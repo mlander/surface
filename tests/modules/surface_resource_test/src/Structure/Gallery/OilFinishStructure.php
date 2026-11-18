@@ -23,7 +23,7 @@ final class OilFinishStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('varnish', Schema::string()
+    $inputs->add('varnish', Schema::string()
       ->title(t('Varnish')));
   }
 

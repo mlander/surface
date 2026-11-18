@@ -28,10 +28,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * Tests a key stated as a Schema, with addSchema().
+ * Tests a key stated as a Schema, with add().
  *
  * The structure property_test.schema_keys declares each key with
- * addSchema(): the schema is read as a document is, into the verbs it
+ * add(): the schema is read as a document is, into the verbs it
  * says, as the author's own. The definition is the module's, and the
  * document served for it says what the definition means: an optional key
  * with a default is one null clears.
@@ -65,7 +65,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Builds the structure whose keys are declared with addSchema().
+   * Builds the structure whose keys are declared with add().
    *
    * @return \Drupal\surface\SurfaceInterface
    *   The structure, built.
@@ -159,13 +159,13 @@ class AddSchemaTest extends SurfaceKernelTestBase {
    */
   public function testRequiredByTheMarkAlone(): void {
     $blueprint = $this->blueprint();
-    $blueprint->addSchema('plain', Schema::string());
-    $blueprint->addSchema('defaulted', Schema::string()->default('x'));
-    $blueprint->addSchema('nullable', Schema::any()->with('type', ['string', 'null']));
-    $blueprint->addSchema('nullable_ref', Schema::any()->with('anyOf', [Schema::of('portable:email'), Schema::null()]));
-    $blueprint->addSchema('marked', Schema::string()->default('x')->required());
-    $blueprint->addSchema('asked', Schema::string()->default('x')->required());
-    $blueprint->addSchema('left', Schema::string());
+    $blueprint->add('plain', Schema::string());
+    $blueprint->add('defaulted', Schema::string()->default('x'));
+    $blueprint->add('nullable', Schema::any()->with('type', ['string', 'null']));
+    $blueprint->add('nullable_ref', Schema::any()->with('anyOf', [Schema::of('portable:email'), Schema::null()]));
+    $blueprint->add('marked', Schema::string()->default('x')->required());
+    $blueprint->add('asked', Schema::string()->default('x')->required());
+    $blueprint->add('left', Schema::string());
     $required = array_map(static fn ($definition): bool => $definition->isRequired(), $blueprint->definitions());
     $this->assertSame([
       'plain' => FALSE,
@@ -189,11 +189,11 @@ class AddSchemaTest extends SurfaceKernelTestBase {
   public function testWhatIsNotReadIsRefused(): void {
     $blueprint = $this->blueprint();
     try {
-      $blueprint->addSchema('never', Schema::boolean(FALSE));
+      $blueprint->add('never', Schema::boolean(FALSE));
       $this->fail('A boolean schema was not refused.');
     }
     catch (\InvalidArgumentException $e) {
-      $this->assertSame('addSchema("never") was handed the boolean schema false, which says only whether a value is allowed: a key is the schema of what it holds, Schema::string(), Schema::integer(), Schema::of(\'portable:email\') and the like.', $e->getMessage());
+      $this->assertSame('add("never") was handed the boolean schema false, which says only whether a value is allowed: a key is the schema of what it holds, Schema::string(), Schema::integer(), Schema::of(\'portable:email\') and the like.', $e->getMessage());
     }
     $notes = SchemaReader::authored($blueprint, 'key', Schema::string()
       ->check('acme:thing')
@@ -233,7 +233,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       ],
       'a property named by digits' => [
         Schema::object()->property('0', Schema::string())->with('additionalProperties', FALSE),
-        'addSchema("digits") was handed a schema naming the property "0" at /properties/digits/properties: a name of digits alone is written as a position, so the object would be served as a list. Name it with a letter in it.',
+        'add("digits") was handed a schema naming the property "0" at /properties/digits/properties: a name of digits alone is written as a position, so the object would be served as a list. Name it with a letter in it.',
       ],
     ];
     $keys = [
@@ -246,13 +246,13 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     ];
     foreach ($refused as $what => [$schema, $said]) {
       try {
-        $this->blueprint()->addSchema($keys[$what], $schema);
+        $this->blueprint()->add($keys[$what], $schema);
         $this->fail(sprintf('%s was not refused.', $what));
       }
       catch (\InvalidArgumentException $e) {
         $this->assertStringContainsString($said, $e->getMessage(), $what);
         if ($what !== 'a property named by digits') {
-          $this->assertStringStartsWith(sprintf('addSchema("%s") reads the schema as the author\'s own, and these parts of it are not read as written', $keys[$what]), $e->getMessage(), $what);
+          $this->assertStringStartsWith(sprintf('add("%s") reads the schema as the author\'s own, and these parts of it are not read as written', $keys[$what]), $e->getMessage(), $what);
         }
       }
     }
@@ -404,12 +404,12 @@ class AddSchemaTest extends SurfaceKernelTestBase {
    */
   public function testLabelsStayTranslatable(): void {
     $blueprint = $this->blueprint();
-    $blueprint->addSchema('x', Schema::from([
+    $blueprint->add('x', Schema::from([
       'type' => 'string',
       'title' => new TranslatableMarkup('X'),
       'description' => new TranslatableMarkup('Why'),
     ]));
-    $blueprint->addSchema('pick', Schema::options(['a' => new TranslatableMarkup('A')])->type('string')->title(new TranslatableMarkup('Pick')));
+    $blueprint->add('pick', Schema::options(['a' => new TranslatableMarkup('A')])->type('string')->title(new TranslatableMarkup('Pick')));
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('x')?->getLabel());
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('x')->getDescription());
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('pick')?->getConstraint('LabeledChoice')['choices']['a'], 'An option\'s label too.');
@@ -417,7 +417,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests where addSchema() cannot run what the schema holds.
+   * Tests where add() cannot run what the schema holds.
    *
    * A part needing a frame (a collection) stops a map's first reading, as
    * any such verb does; an alter's blueprint and a shape's refuse it.
@@ -427,7 +427,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $collection = Schema::list(Schema::object()->property('a', Schema::string())->with('additionalProperties', FALSE));
     $map = new MapBlueprint(MapDataDefinition::create(), 'kit', $this->blueprint(), new SurfaceBuilder(), $typed);
     try {
-      $map->addSchema('racks', $collection);
+      $map->add('racks', $collection);
       $this->fail('A collection in a map did not ask for a frame.');
     }
     catch (NeedsFrame $e) {
@@ -435,7 +435,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     }
     $alter = new ResourceBlueprintAdditions(new SurfaceBuilder(), $typed, 'surface_test');
     try {
-      $alter->addSchema('racks', $collection);
+      $alter->add('racks', $collection);
       $this->fail('A collection in an alter was not refused.');
     }
     catch (\LogicException $e) {
@@ -443,7 +443,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     }
     try {
       $alter->addMap('kit', 'Kit', static function (BlueprintInterface $inner) use ($collection): void {
-        $inner->addSchema('racks', $collection);
+        $inner->add('racks', $collection);
       });
       $this->fail('A collection in an alter\'s map was not refused.');
     }
@@ -451,13 +451,13 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       $this->assertStringContainsString('inside the map "kit", declared with addMap(): a map whose keys need a frame of their own is a structure with no id, attached at the key', $e->getMessage());
     }
     try {
-      (new ShapeBlueprint('resource_test.sku', 'Drupal\some_module\Alter\SkuAlter'))->addSchema('note', Schema::string());
+      (new ShapeBlueprint('resource_test.sku', 'Drupal\some_module\Alter\SkuAlter'))->add('note', Schema::string());
       $this->fail('A shape\'s alter was not refused.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('calls addSchema("note"). A shape is one value', $e->getMessage());
+      $this->assertStringContainsString('calls add("note"). A shape is one value', $e->getMessage());
     }
-    $alter->addSchema('plain', Schema::string()->default('x'));
+    $alter->add('plain', Schema::string()->default('x'));
     $this->assertSame(['plain'], $alter->keys(), 'Plain keys are read anywhere.');
   }
 
@@ -547,7 +547,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
   /**
    * Tests a message made with t() is served and said as a string one was.
    *
-   * An addSchema() key's message made with t() stays that object when it
+   * An add() key's message made with t() stays that object when it
    * is read, and the data surface holds its source string, as it held a
    * shape's at 20ef965. Within one language nothing served moves: the
    * published node, the refusal and the source are what they were when
@@ -564,7 +564,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       $builder = new SurfaceBuilder();
       $blueprint = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'));
       // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-      $blueprint->addSchema('code', Schema::string()->title('Code')->pattern('^[a-z]+$')->message('pattern', new TranslatableMarkup($source)));
+      $blueprint->add('code', Schema::string()->title('Code')->pattern('^[a-z]+$')->message('pattern', new TranslatableMarkup($source)));
       $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('code')?->getConstraints()['Regex']['message'], $case);
       $surface = $builder->seal();
       $definition = $surface->getDefinition('code');

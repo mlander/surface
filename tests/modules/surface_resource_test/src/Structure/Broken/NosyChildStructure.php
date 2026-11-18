@@ -20,7 +20,7 @@ final class NosyChildStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('height', Schema::integer()
+    $inputs->add('height', Schema::integer()
       ->title('Height'));
   }
 

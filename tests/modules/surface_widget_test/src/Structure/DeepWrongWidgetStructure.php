@@ -21,9 +21,9 @@ final class DeepWrongWidgetStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note')));
-    $inputs->addSchema('tags', Schema::list(Schema::string()->ui(widget: 'no_such_widget'))
+    $inputs->add('tags', Schema::list(Schema::string()->ui(widget: 'no_such_widget'))
       ->title(t('Tags')));
   }
 

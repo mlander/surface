@@ -30,37 +30,37 @@ final class SpecimenResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->default('specimen')
       ->required());
-    $inputs->addSchema('word', Schema::string()
+    $inputs->add('word', Schema::string()
       ->title(t('Word')));
-    $inputs->addSchema('count', Schema::integer()
+    $inputs->add('count', Schema::integer()
       ->title(t('Count'))
       ->default(5)
       ->minimum(1)
       ->maximum(1000));
-    $inputs->addSchema('ratio', Schema::number()
+    $inputs->add('ratio', Schema::number()
       ->title(t('Ratio')));
-    $inputs->addSchema('flag', Schema::bool()
+    $inputs->add('flag', Schema::bool()
       ->title(t('Flag')));
-    $inputs->addSchema('mail', Schema::string()->format('email')
+    $inputs->add('mail', Schema::string()->format('email')
       ->title(t('Mail')));
-    $inputs->addSchema('link', Schema::string()->format('uri')
+    $inputs->add('link', Schema::string()->format('uri')
       ->title(t('Link')));
-    $inputs->addSchema('kind', Schema::enum(['alpha', 'beta'])
+    $inputs->add('kind', Schema::enum(['alpha', 'beta'])
       ->title(t('Kind')));
-    $inputs->addSchema('code', Schema::string()
+    $inputs->add('code', Schema::string()
       ->title(t('Code'))
       ->check('drupal:Regex', ['pattern' => '/^[a-z]{2}\d{2}$/D', 'message' => 'Two letters and two digits.']));
-    $inputs->addSchema('tags', Schema::list(Schema::enum(['a', 'b', 'c', 'd', 'x']))
+    $inputs->add('tags', Schema::list(Schema::enum(['a', 'b', 'c', 'd', 'x']))
       ->title(t('Tags'))
       ->maxItems(3));
     $inputs->addMap('size', t('Size'), static function (BlueprintInterface $size): void {
-      $size->addSchema('width', Schema::integer()
+      $size->add('width', Schema::integer()
         ->title(t('Width')));
-      $size->addSchema('unit', Schema::enum(['cm', 'in'])
+      $size->add('unit', Schema::enum(['cm', 'in'])
         ->title(t('Unit')));
     });
   }

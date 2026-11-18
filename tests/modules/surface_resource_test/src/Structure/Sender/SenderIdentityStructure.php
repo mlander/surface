@@ -26,12 +26,12 @@ final class SenderIdentityStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->maxLength(64));
-    $inputs->addSchema('email', Schema::string()->format('email')
+    $inputs->add('email', Schema::string()->format('email')
       ->title(t('Email')));
-    $inputs->addSchema('signature', Schema::string()
+    $inputs->add('signature', Schema::string()
       ->title(t('Signature')));
     $inputs->narrow('name')
       ->when(Condition::present('email'))

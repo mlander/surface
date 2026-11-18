@@ -36,28 +36,28 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Event title'))
       ->required());
 
-    $inputs->addSchema('open', Schema::bool()
+    $inputs->add('open', Schema::bool()
       ->title(t('Registration open'))
       ->default(TRUE));
 
-    $inputs->addSchema('venue', Schema::options(Venues::VENUES)->type('string')
+    $inputs->add('venue', Schema::options(Venues::VENUES)->type('string')
       ->title(t('Venue'))
       ->required());
 
-    $inputs->addSchema('room', Schema::options(Venues::rooms())->type('string')
+    $inputs->add('room', Schema::options(Venues::rooms())->type('string')
       ->title(t('Room'))
       ->required());
 
-    $inputs->addSchema('capacity', Schema::integer()
+    $inputs->add('capacity', Schema::integer()
       ->title(t('Capacity'))
       ->default(50)
       ->minimum(1));
 
-    $inputs->addSchema('pricing', Schema::string()
+    $inputs->add('pricing', Schema::string()
       ->title(t('Pricing'))
       ->default('free')
       ->required());

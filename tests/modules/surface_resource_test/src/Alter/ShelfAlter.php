@@ -20,7 +20,7 @@ final class ShelfAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('sturdy', Schema::bool()
+    $inputs->add('sturdy', Schema::bool()
       ->title('Sturdy')
       ->default(TRUE));
     $inputs->describe('height', description: 'Measured inside.');

@@ -64,7 +64,7 @@ final class ExampleFormatterAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('badge', Schema::options([
+    $inputs->add('badge', Schema::options([
       'star' => $this->t('Star'),
       'flame' => $this->t('Flame'),
     ])

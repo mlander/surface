@@ -25,12 +25,12 @@ final class PlainRelayResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('token', Schema::string()
+    $inputs->add('token', Schema::string()
       ->title(t('Token'))
       ->description(t('The token each call is made with, pasted here.'))
       ->writeOnly(TRUE));
 
-    $inputs->addSchema('vault_id', Schema::string()
+    $inputs->add('vault_id', Schema::string()
       ->title(t('Vault entry')));
   }
 

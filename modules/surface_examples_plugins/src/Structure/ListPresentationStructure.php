@@ -31,7 +31,7 @@ final class ListPresentationStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('show_summary', Schema::bool()
+    $inputs->add('show_summary', Schema::bool()
       ->title(t('Show summaries'))
       ->description(t('Whether item summaries render.'))
       ->default(TRUE));

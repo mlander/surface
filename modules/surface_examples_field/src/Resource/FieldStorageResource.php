@@ -138,26 +138,26 @@ final class FieldStorageResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which storage this is: the field's, which hands it to its storage.
-    $inputs->addSchema('entity_type', Schema::string()
+    $inputs->add('entity_type', Schema::string()
       ->title(t('Entity type'))
       ->description(t('The machine name of the entity type the field is on.')));
 
-    $inputs->addSchema('field_name', Schema::string()
+    $inputs->add('field_name', Schema::string()
       ->title(t('Machine name'))
       ->description(t('The machine name of the field, for example field_tags.')));
 
-    $inputs->addSchema('field_type', Schema::string()
+    $inputs->add('field_type', Schema::string()
       ->title(t('Field type'))
       ->description(t("The field type, which decides what the storage settings are. The same as the field's.")));
 
     // The storage itself.
-    $inputs->addSchema('cardinality', Schema::integer()
+    $inputs->add('cardinality', Schema::integer()
       ->title(t('Allowed number of values'))
       ->description(t('How many values the field holds: a number of one or more, or -1 for unlimited.'))
       ->default(1)
       ->minimum(FieldStorageConfigInterface::CARDINALITY_UNLIMITED));
 
-    $inputs->addSchema('translatable', Schema::bool()
+    $inputs->add('translatable', Schema::bool()
       ->title(t('Translatable'))
       ->default(TRUE));
 

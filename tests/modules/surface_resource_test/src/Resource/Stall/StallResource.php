@@ -27,29 +27,29 @@ final class StallResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->required());
 
     $inputs->addMap('where', t('Where'), static function (BlueprintInterface $where): void {
-      $where->addSchema('row', Schema::string()
+      $where->add('row', Schema::string()
         ->title(t('Row'))
         ->default('A'));
       $where->addMap('point', t('Point'), static function (BlueprintInterface $point): void {
-        $point->addSchema('lat', Schema::number()
+        $point->add('lat', Schema::number()
           ->title(t('Latitude')));
-        $point->addSchema('lng', Schema::number()
+        $point->add('lng', Schema::number()
           ->title(t('Longitude')));
       });
     });
 
     $inputs->addMap('kit', t('Kit'), static function (BlueprintInterface $kit): void {
-      $kit->addSchema('tent', Schema::bool()
+      $kit->add('tent', Schema::bool()
         ->title(t('Tent'))
         ->default(FALSE));
       $kit->attach('bench', BenchStructure::class, t('Bench'));
       $kit->addMap('spare', t('Spare'), static function (BlueprintInterface $spare): void {
-        $spare->addSchema('count', Schema::integer()
+        $spare->add('count', Schema::integer()
           ->title(t('How many'))
           ->default(0));
         $spare->attach('bench', BenchStructure::class, t('Spare bench'));

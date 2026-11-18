@@ -22,7 +22,7 @@ final class HammockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('straps', Schema::integer()
+    $inputs->add('straps', Schema::integer()
       ->title(t('Straps'))
       ->default(2)
       ->minimum(1)

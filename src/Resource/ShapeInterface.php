@@ -28,7 +28,7 @@ interface ShapeInterface {
    *
    * Takes nothing and holds no service, as defineInputs() does: what a
    * shape allows is a property of the class. It is read as an author's
-   * schema is (addSchema()), so a title, a description or a message made
+   * schema is (add()), so a title, a description or a message made
    * with t() stays translatable. No default and no required marker,
    * which the key decides; a scalar type, never an object or an array,
    * which are structures.

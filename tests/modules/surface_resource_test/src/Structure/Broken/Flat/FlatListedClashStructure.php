@@ -25,9 +25,9 @@ final class FlatListedClashStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::string()
+    $inputs->add('kind', Schema::string()
       ->title('Kind'));
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title('Weight'));
     $weight = ['a', WeightOnlyStructure::class];
     $inputs->attachVariants(

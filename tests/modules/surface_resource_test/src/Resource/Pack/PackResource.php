@@ -40,14 +40,14 @@ final class PackResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->required());
-    $inputs->addSchema('carry', Schema::string()
+    $inputs->add('carry', Schema::string()
       ->title(t('Carry'))
       ->required());
     $inputs->attachVariants('load', by: 'carry', label: t('Load'));
-    $inputs->addSchema('notes', Schema::string()
+    $inputs->add('notes', Schema::string()
       ->title(t('Notes')));
   }
 

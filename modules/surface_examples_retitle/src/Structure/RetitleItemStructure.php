@@ -22,13 +22,13 @@ final class RetitleItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('node', Schema::integer()
+    $inputs->add('node', Schema::integer()
       ->title(t('Node'))
       ->description(t('The node to retitle.'))
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
       ->required());
 
-    $inputs->addSchema('new_title', Schema::string()
+    $inputs->add('new_title', Schema::string()
       ->title(t('New title'))
       ->description(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
       ->maxLength(255));

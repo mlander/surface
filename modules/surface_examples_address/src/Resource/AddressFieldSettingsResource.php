@@ -53,7 +53,7 @@ final class AddressFieldSettingsResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     // The item says what one country code is, and the Country constraint
     // is the whole of that.
-    $inputs->addSchema('available_countries', Schema::list(Schema::string()
+    $inputs->add('available_countries', Schema::list(Schema::string()
       ->title(t('Country'))
       ->check('drupal:Country'))
       ->title(t('Available countries'))
@@ -63,7 +63,7 @@ final class AddressFieldSettingsResource implements ResourceInterface {
     // Locked languages are excluded by default, which is what the address
     // module's own settings form does by hand: "not specified" and "not
     // applicable" are not languages an address is formatted in.
-    $inputs->addSchema('langcode_override', Schema::string()
+    $inputs->add('langcode_override', Schema::string()
       ->title(t('Language override'))
       ->description(t('Ensures entered addresses are always formatted in the same language.'))
       ->check('drupal:LanguageExists'));

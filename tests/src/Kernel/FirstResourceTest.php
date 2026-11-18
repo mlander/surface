@@ -137,7 +137,7 @@ class FirstResourceTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the labels the page's addSchema() calls make with t() stay so.
+   * Tests the labels the page's add() calls make with t() stay so.
    *
    * The reader reads the Schema an author hands it as it is, never
    * through JSON, so each label, description and option label is the

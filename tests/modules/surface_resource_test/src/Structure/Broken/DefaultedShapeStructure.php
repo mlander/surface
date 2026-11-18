@@ -20,7 +20,7 @@ final class DefaultedShapeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('code', Schema::of(DefaultedShape::class)
+    $inputs->add('code', Schema::of(DefaultedShape::class)
       ->title('Code'));
   }
 

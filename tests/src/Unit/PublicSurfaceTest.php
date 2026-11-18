@@ -139,6 +139,11 @@ use PHPUnit\Framework\Attributes\Group;
  * attributes, 110 arguments. Before it, #[Shape] and its one argument had
  * gone, a shape's class carrying the package's #[Document]: 27 and 113.
  *
+ * Cut on 2026-11-17 by one blueprint method: `addSchema()` is `add()`,
+ * which takes the key's schema, and reads the old spelling, a type and a
+ * label, until its last callers are converted
+ * (docs/decisions.md#authoring-takes-a-schema): 17 methods.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -160,7 +165,7 @@ class PublicSurfaceTest extends UnitTestCase {
   protected const PINNED = [
     'attributes' => 26,
     'attribute arguments' => 110,
-    'blueprint methods' => 18,
+    'blueprint methods' => 17,
     'interfaces' => 22,
   ];
 

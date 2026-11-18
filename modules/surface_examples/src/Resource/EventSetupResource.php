@@ -31,13 +31,13 @@ final class EventSetupResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Event name'))
       ->default('Autumn meetup')
       ->maxLength(128)
       ->required());
 
-    $inputs->addSchema('date', Schema::string()
+    $inputs->add('date', Schema::string()
       ->title(t('Date'))
       ->description(t('YYYY-MM-DD.'))
       ->default('2026-10-17')
@@ -47,23 +47,23 @@ final class EventSetupResource implements ResourceInterface {
       ])
       ->ui(widget: 'date'));
 
-    $inputs->addSchema('capacity', Schema::integer()
+    $inputs->add('capacity', Schema::integer()
       ->title(t('Capacity'))
       ->default(100)
       ->minimum(1)
       ->maximum(5000));
 
-    $inputs->addSchema('price', Schema::number()
+    $inputs->add('price', Schema::number()
       ->title(t('Ticket price'))
       ->default(25.0)
       ->minimum(0));
     $inputs->describe('price', suffix: t('EUR'));
 
-    $inputs->addSchema('sales_open', Schema::bool()
+    $inputs->add('sales_open', Schema::bool()
       ->title(t('Ticket sales open'))
       ->default(FALSE));
 
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note for buyers'))
       ->ui(widget: 'textarea'));
   }

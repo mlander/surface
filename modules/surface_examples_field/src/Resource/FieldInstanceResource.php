@@ -154,7 +154,7 @@ final class FieldInstanceResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
-    $inputs->addSchema('entity_type', Schema::string()
+    $inputs->add('entity_type', Schema::string()
       ->title(t('Entity type'))
       ->description(t('The machine name of the entity type the field is on.'))
       ->check('drupal:PluginExists', [
@@ -163,19 +163,19 @@ final class FieldInstanceResource implements ResourceInterface {
       ])
       ->required());
 
-    $inputs->addSchema('bundle', Schema::string()
+    $inputs->add('bundle', Schema::string()
       ->title(t('Bundle'))
       ->description(t('The bundle the field is on, for example article or page.'))
       ->required());
 
-    $inputs->addSchema('field_type', Schema::string()
+    $inputs->add('field_type', Schema::string()
       ->title(t('Field type'))
       ->description(t('The field type, which decides what the settings are.'))
       ->required());
 
     // What a field storage's name may be, which its constructor refuses
     // otherwise with an exception rather than a violation.
-    $inputs->addSchema('field_name', Schema::string()
+    $inputs->add('field_name', Schema::string()
       ->title(t('Machine name'))
       ->description(t('The machine name of the field storage, for example field_tags.'))
       ->maxLength(FieldStorageConfig::NAME_MAX_LENGTH)
@@ -186,16 +186,16 @@ final class FieldInstanceResource implements ResourceInterface {
       ->required());
 
     // The field itself.
-    $inputs->addSchema('label', Schema::string()
+    $inputs->add('label', Schema::string()
       ->title(t('Label'))
       ->description(t('The human readable label for the field on this bundle.'))
       ->required());
 
-    $inputs->addSchema('description', Schema::string()
+    $inputs->add('description', Schema::string()
       ->title(t('Help text'))
       ->description(t('Help text to display for the field.')));
 
-    $inputs->addSchema('required', Schema::bool()
+    $inputs->add('required', Schema::bool()
       ->title(t('Required field'))
       ->description(t('Whether the field is required.'))
       ->default(FALSE));

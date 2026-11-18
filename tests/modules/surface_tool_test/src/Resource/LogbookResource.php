@@ -61,12 +61,12 @@ final class LogbookResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('entry', Schema::string()
+    $inputs->add('entry', Schema::string()
       ->title(t('Entry')));
-    $inputs->addSchema('shelf', Schema::string()
+    $inputs->add('shelf', Schema::string()
       ->title(t('Shelf'))
       ->check('drupal:Choice', ['choices' => self::SHELVES]));
-    $inputs->addSchema('pages', Schema::integer()
+    $inputs->add('pages', Schema::integer()
       ->title(t('Pages'))
       ->minimum(1)
       ->maximum(500));

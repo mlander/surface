@@ -221,7 +221,7 @@ rule or an access answer only the server knows: not read, noted.
 
 ### An author's schema
 
-A key an author states as a Schema (`addSchema()`, or the package's
+A key an author states as a Schema (`add()`, or the package's
 attributes on a property) is read the same way, as one property of a
 closed object, with two differences, since the schema is the host's own
 ([decision](decisions.md#authoring-takes-a-schema)):
@@ -244,7 +244,7 @@ closed object, with two differences, since the schema is the host's own
 - What is noted and is none of a link dropped, a check kept or merged,
   a value held whole to its schema or a def or type of the library read
   in place is refused:
-  `addSchema()` throws, naming each part by its pointer. A message under
+  `add()` throws, naming each part by its pointer. A message under
   any other code but `pattern` and `not` is one such part.
 
 ## What is kept

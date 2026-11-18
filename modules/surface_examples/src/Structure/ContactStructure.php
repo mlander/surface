@@ -23,11 +23,11 @@ final class ContactStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('email', Schema::string()->format('email')
+    $inputs->add('email', Schema::string()->format('email')
       ->title(t('Email'))
       ->required());
 
-    $inputs->addSchema('phone', Schema::string()
+    $inputs->add('phone', Schema::string()
       ->title(t('Phone')));
   }
 

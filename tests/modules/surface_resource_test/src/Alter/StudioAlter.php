@@ -28,7 +28,7 @@ final class StudioAlter implements AltersInputsInterface {
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->describe('name', placeholder: 'Riverside studio', help: 'Shown on the door.');
     $inputs->describe('deposit', weight: -1);
-    $inputs->addSchema('booking_fee', Schema::integer()
+    $inputs->add('booking_fee', Schema::integer()
       ->title('Booking fee')
       ->default(0)
       ->minimum(0));

@@ -22,7 +22,7 @@ final class RecordStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('reference', Schema::string()
+    $inputs->add('reference', Schema::string()
       ->title(t('Reference')));
     $inputs->mixIn(TimestampsStructure::class);
   }

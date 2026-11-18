@@ -22,7 +22,7 @@ final class KeyLockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('keys', Schema::integer()
+    $inputs->add('keys', Schema::integer()
       ->title(t('Keys'))
       ->default(2)
       ->minimum(1)

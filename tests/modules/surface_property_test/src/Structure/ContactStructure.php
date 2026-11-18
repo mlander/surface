@@ -26,11 +26,11 @@ final class ContactStructure implements StructureInterface {
 
     $inputs->reads('anything', Schema::any()->required());
 
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Name'))
       ->required());
 
-    $inputs->addSchema('email', Schema::string()->format('email')
+    $inputs->add('email', Schema::string()->format('email')
       ->title(t('Email')));
 
     $inputs->narrow('email')

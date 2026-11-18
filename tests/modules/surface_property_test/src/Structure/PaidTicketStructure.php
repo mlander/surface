@@ -22,7 +22,7 @@ final class PaidTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('price', Schema::number()
+    $inputs->add('price', Schema::number()
       ->title(t('Price'))
       ->minimum(0)
       ->required());

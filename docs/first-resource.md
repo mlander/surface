@@ -24,7 +24,7 @@ This page uses four things and nothing else:
 | `#[Resource]` | what the thing is called and where it is stored |
 | `#[Operation]` | how it is asked for, what that does, and the permission that gates it |
 | a storage | the config object it lives in |
-| `defineInputs()` with `addSchema()` | its keys: name, and a schema of type, label and what each allows |
+| `defineInputs()` with `add()` | its keys: name, and a schema of type, label and what each allows |
 
 Every file below is the shipped module `surface_examples_first`, word for
 word; a test fails if the page and the module differ, so what you copy
@@ -180,17 +180,17 @@ final class NewsletterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema(self::SENDER_NAME, Schema::string()
+    $inputs->add(self::SENDER_NAME, Schema::string()
       ->title(t('Sender name'))
       ->maxLength(64)
       ->required());
 
-    $inputs->addSchema(self::SENDER_EMAIL, Schema::string()
+    $inputs->add(self::SENDER_EMAIL, Schema::string()
       ->title(t('Sender email'))
       ->format('email')
       ->required());
 
-    $inputs->addSchema(self::FREQUENCY, Schema::options([
+    $inputs->add(self::FREQUENCY, Schema::options([
       'weekly' => t('Weekly'),
       'monthly' => t('Monthly'),
     ])
@@ -199,7 +199,7 @@ final class NewsletterResource implements ResourceInterface {
       ->default('weekly')
       ->required());
 
-    $inputs->addSchema(self::MAX_RECIPIENTS, Schema::integer()
+    $inputs->add(self::MAX_RECIPIENTS, Schema::integer()
       ->title(t('Maximum recipients per send'))
       ->description(t('Larger lists are sent in batches of this size.'))
       ->minimum(1)
@@ -230,7 +230,7 @@ Read it top to bottom:
 - **The constants** name each key once, and every later mention is the
   constant, `self::SENDER_NAME`, so a key can be renamed or its uses
   found ([Key names](declaring-a-resource.md#key-names)).
-- **`defineInputs()`** declares the keys. `addSchema()` takes the key
+- **`defineInputs()`** declares the keys. `add()` takes the key
   and a Portable Schema of what it holds, built from `Schema::string()`,
   `Schema::integer()`, `Schema::bool()` or `Schema::options()` with one
   method per keyword: `title()`, `description()`, `maxLength()`,

@@ -22,7 +22,7 @@ final class NarrowsAttachedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('channel', Schema::enum(['post', 'email'])
+    $inputs->add('channel', Schema::enum(['post', 'email'])
       ->title('Channel'));
     $inputs->attach('address', NoticeAddressStructure::class, 'Address');
   }

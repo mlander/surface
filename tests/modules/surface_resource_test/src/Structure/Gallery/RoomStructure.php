@@ -19,7 +19,7 @@ final class RoomStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('lights', Schema::bool()
+    $inputs->add('lights', Schema::bool()
       ->title(t('Lights'))
       ->default(FALSE));
   }

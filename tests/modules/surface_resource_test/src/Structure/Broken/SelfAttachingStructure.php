@@ -19,7 +19,7 @@ final class SelfAttachingStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title('Name'));
     $inputs->attach('again', self::class);
   }

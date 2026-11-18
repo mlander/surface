@@ -39,7 +39,7 @@ final class StageAppliedStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->addSchema('applied', Schema::list(StageChangesStructure::write(t('Applied write'))
+    $outputs->add('applied', Schema::list(StageChangesStructure::write(t('Applied write'))
       ->properties([
         'changed' => Schema::bool()
           ->title(t('Changed'))

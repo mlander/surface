@@ -28,10 +28,10 @@ final class StoveKitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title(t('Weight'))
       ->minimum(0));
-    $inputs->addSchema('fuel', Schema::options([
+    $inputs->add('fuel', Schema::options([
       'gas' => t('Gas'),
       'spirit' => t('Spirit'),
     ])

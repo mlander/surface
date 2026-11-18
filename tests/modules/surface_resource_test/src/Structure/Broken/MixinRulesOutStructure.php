@@ -21,7 +21,7 @@ final class MixinRulesOutStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('kind', Schema::enum(['draft', 'final'])
+    $inputs->add('kind', Schema::enum(['draft', 'final'])
       ->title('Kind'));
     $inputs->mixIn(TimestampsStructure::class);
     $inputs->narrow('changed')

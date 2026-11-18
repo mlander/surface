@@ -19,7 +19,7 @@ final class OutputsAlter {
    * Adds an output to every recipe.
    */
   public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
-    $outputs->addSchema('plated', Schema::bool()
+    $outputs->add('plated', Schema::bool()
       ->title('Plated'));
   }
 

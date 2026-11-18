@@ -47,7 +47,7 @@ final class WebhookKeyAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->addSchema('key_id', Schema::string()
+    $inputs->add('key_id', Schema::string()
       ->title($this->t('Key'))
       ->description($this->t('A key the site manages, used in place of a pasted one.'))
       ->check('drupal:ManagedKey'));

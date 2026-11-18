@@ -34,7 +34,7 @@ final class StoreroomResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title('Name')
       ->default('Storeroom'));
     $inputs->attachList('aisles', AisleStructure::class, 'Aisles', max: 3);

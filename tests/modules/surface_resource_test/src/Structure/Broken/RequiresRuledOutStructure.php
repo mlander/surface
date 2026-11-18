@@ -22,9 +22,9 @@ final class RequiresRuledOutStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('mode', Schema::string()
+    $inputs->add('mode', Schema::string()
       ->title('Mode'));
-    $inputs->addSchema('detail', Schema::string()
+    $inputs->add('detail', Schema::string()
       ->title('Detail'));
     $inputs->narrow('detail')
       ->when(Condition::present('mode'))

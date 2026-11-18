@@ -49,17 +49,17 @@ final class ExhibitResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->required());
-    $inputs->addSchema('status', Schema::options([
+    $inputs->add('status', Schema::options([
       'open' => t('Open'),
       'sealed' => t('Sealed'),
     ])
       ->title(t('Status'))
       ->default('open')
       ->required());
-    $inputs->addSchema('room', Schema::options(self::ROOMS)->type('string')
+    $inputs->add('room', Schema::options(self::ROOMS)->type('string')
       ->title(t('Room'))
       ->default('east'));
     $inputs->mixIn(ProvenanceStructure::class);

@@ -41,7 +41,7 @@ final class ParcelResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('service', Schema::options([
+    $inputs->add('service', Schema::options([
       'standard' => t('Standard'),
       'express' => t('Express'),
       'freight' => t('Freight'),
@@ -49,42 +49,42 @@ final class ParcelResource implements ResourceInterface {
       ->title(t('Service'))
       ->default('standard')
       ->required());
-    $inputs->addSchema('weight', Schema::integer()
+    $inputs->add('weight', Schema::integer()
       ->title(t('Weight in kilograms'))
       ->default(1)
       ->minimum(1)
       ->maximum(1000)
       ->required());
-    $inputs->addSchema('insured', Schema::bool()
+    $inputs->add('insured', Schema::bool()
       ->title(t('Insured'))
       ->default(FALSE));
-    $inputs->addSchema('declared_value', Schema::integer()
+    $inputs->add('declared_value', Schema::integer()
       ->title(t('Declared value'))
       ->minimum(0)
       ->maximum(100000));
-    $inputs->addSchema('reference', Schema::string()
+    $inputs->add('reference', Schema::string()
       ->title(t('Reference'))
       ->maxLength(32));
-    $inputs->addSchema('signature', Schema::string()
+    $inputs->add('signature', Schema::string()
       ->title(t('Signed for by'))
       ->maxLength(64));
-    $inputs->addSchema('tracking', Schema::string()
+    $inputs->add('tracking', Schema::string()
       ->title(t('Tracking code')));
-    $inputs->addSchema('handling', Schema::options([
+    $inputs->add('handling', Schema::options([
       'fragile' => t('Fragile'),
       'upright' => t('This way up'),
       'cold' => t('Keep cold'),
     ])
       ->title(t('Handling'))
       ->ui(widget: 'radios'));
-    $inputs->addSchema('labels', Schema::list(Schema::options([
+    $inputs->add('labels', Schema::list(Schema::options([
       'dry' => t('Keep dry'),
       'heavy' => t('Heavy'),
       'perishable' => t('Perishable'),
     ]))
       ->title(t('Labels'))
       ->maxItems(3));
-    $inputs->addSchema('note', Schema::string()
+    $inputs->add('note', Schema::string()
       ->title(t('Note for the driver'))
       ->required());
 

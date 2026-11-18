@@ -30,23 +30,23 @@ final class StudioResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('name', Schema::string()
+    $inputs->add('name', Schema::string()
       ->title(t('Studio name'))
       ->maxLength(60)
       ->required());
 
     $hours = ArrangementGroup::fieldset('hours', t('Opening hours'));
-    $inputs->addSchema('opens', Schema::string()
+    $inputs->add('opens', Schema::string()
       ->title(t('Opens at'))
       ->default('09:00'));
     $inputs->describe('opens', group: $hours, weight: 2);
-    $inputs->addSchema('closes', Schema::string()
+    $inputs->add('closes', Schema::string()
       ->title(t('Closes at'))
       ->default('17:00'));
     $inputs->describe('closes', group: $hours, weight: 1);
 
     $pricing = ArrangementGroup::details('pricing', t('Pricing'), collapsed: TRUE);
-    $inputs->addSchema('rate', Schema::integer()
+    $inputs->add('rate', Schema::integer()
       ->title(t('Hourly rate'))
       ->description(t('What an hour in the studio costs.'))
       ->minimum(0)
@@ -58,12 +58,12 @@ final class StudioResource implements ResourceInterface {
       suffix: t('per hour'),
       help: t('Whole dollars.'),
     );
-    $inputs->addSchema('deposit', Schema::bool()
+    $inputs->add('deposit', Schema::bool()
       ->title(t('Deposit asked'))
       ->default(FALSE));
     $inputs->describe('deposit', group: $pricing);
 
-    $inputs->addSchema('notes', Schema::string()
+    $inputs->add('notes', Schema::string()
       ->title(t('Notes'))
       ->ui(widget: 'textarea'));
     $inputs->describe('notes', weight: -10);

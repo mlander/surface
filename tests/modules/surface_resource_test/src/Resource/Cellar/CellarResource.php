@@ -52,10 +52,10 @@ final class CellarResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('larder', Schema::string()
+    $inputs->add('larder', Schema::string()
       ->title('Larder')
       ->required());
-    $inputs->addSchema('size', Schema::enum(['small', 'large'])
+    $inputs->add('size', Schema::enum(['small', 'large'])
       ->title('Size')
       ->default('large'));
     $inputs->attachList(

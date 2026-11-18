@@ -22,14 +22,14 @@ final class TestActionStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('message', Schema::string()
+    $inputs->add('message', Schema::string()
       ->title(t('Message'))
       ->description(t('Shown to the person the action runs for.'))
       ->default('Done')
       ->maxLength(40)
       ->examples(['The article was published'])
       ->required());
-    $inputs->addSchema('level', Schema::options([
+    $inputs->add('level', Schema::options([
       'status' => t('Status'),
       'warning' => t('Warning'),
     ])

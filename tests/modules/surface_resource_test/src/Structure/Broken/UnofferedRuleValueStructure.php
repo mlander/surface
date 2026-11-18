@@ -20,9 +20,9 @@ final class UnofferedRuleValueStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('flag', Schema::bool()
+    $inputs->add('flag', Schema::bool()
       ->title('Flag'));
-    $inputs->addSchema('kind', Schema::options(['a' => 'A', 'b' => 'B'])
+    $inputs->add('kind', Schema::options(['a' => 'A', 'b' => 'B'])
       ->title('Kind'));
     $inputs->narrow('kind')
       ->when(Condition::equals('flag', TRUE))

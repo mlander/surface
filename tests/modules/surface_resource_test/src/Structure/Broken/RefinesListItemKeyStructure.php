@@ -21,7 +21,7 @@ final class RefinesListItemKeyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('size', Schema::string()
+    $inputs->add('size', Schema::string()
       ->title('Size'));
     $inputs->attachList('racks', SpiceRackResource::class);
   }

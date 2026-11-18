@@ -23,7 +23,7 @@ final class BannerPanelsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('headline', Schema::string()
+    $inputs->add('headline', Schema::string()
       ->title(t('Headline'))
       ->required());
   }

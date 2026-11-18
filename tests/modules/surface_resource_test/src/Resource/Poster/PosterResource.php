@@ -36,7 +36,7 @@ final class PosterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('layout', Schema::string()
+    $inputs->add('layout', Schema::string()
       ->title(t('Layout'))
       ->default('grid')
       ->required());

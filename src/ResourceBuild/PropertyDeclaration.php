@@ -85,7 +85,7 @@ use PortableSchema\Builder\Schema;
  * the `type`, `?T` null beside it, the initializer the `default`, #[Of]
  * the `$ref`, #[Schema] keywords, #[Check] checks, #[Ui] hints;
  * required with no default and no null, or with #[Required]), and
- * declared with addSchema(). The package's attributes are a spelling of
+ * declared with add(). The package's attributes are a spelling of
  * #[Input], so they combine with what #[Input] combines with and no more:
  * #[Examples] and #[Rule]; another kind (#[Output], #[Port], #[Computed],
  * #[Attach] and the rest) is refused as it is beside #[Input]. #[Input],
@@ -367,11 +367,11 @@ final class PropertyDeclaration {
    * Declares a property spelled with the package's attributes.
    *
    * Its schema, as ClassReader builds a property's (schema()), declared
-   * with addSchema(), marked required where it carries #[Required], or has
+   * with add(), marked required where it carries #[Required], or has
    * no initializer and a type that refuses null, as ClassReader marks a
    * property; the group its
    * #[Ui] names is the class's, laid on with describe() as #[Describe]
-   * lays one. What addSchema() refuses is refused naming the property.
+   * lays one. What add() refuses is refused naming the property.
    *
    * @param \ReflectionProperty $property
    *   The property.
@@ -391,7 +391,7 @@ final class PropertyDeclaration {
       $schema = $schema->required();
     }
     try {
-      $blueprint->addSchema($key, $schema);
+      $blueprint->add($key, $schema);
     }
     catch (\InvalidArgumentException $refused) {
       throw new \InvalidArgumentException(sprintf('%s::$%s: %s', $property->getDeclaringClass()->getName(), $key, $refused->getMessage()), 0, $refused);

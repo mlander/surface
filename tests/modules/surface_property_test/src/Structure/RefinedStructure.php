@@ -20,11 +20,11 @@ final class RefinedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('size', Schema::enum(['small', 'large'])
+    $inputs->add('size', Schema::enum(['small', 'large'])
       ->title(t('Size'))
       ->default('small'));
 
-    $inputs->addSchema('limit', Schema::integer()
+    $inputs->add('limit', Schema::integer()
       ->title(t('Limit'))
       ->default(5)
       ->minimum(1)

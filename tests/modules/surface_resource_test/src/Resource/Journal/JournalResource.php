@@ -43,10 +43,10 @@ final class JournalResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('title', Schema::string()
+    $inputs->add('title', Schema::string()
       ->title(t('Title'))
       ->required());
-    $inputs->addSchema('visibility', Schema::options([
+    $inputs->add('visibility', Schema::options([
       'public' => t('Public'),
       'staff' => t('Staff'),
     ])
@@ -55,11 +55,11 @@ final class JournalResource implements ResourceInterface {
       ->required());
     $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
     $inputs->mixIn(TimestampsStructure::class);
-    $inputs->addSchema('revision', Schema::integer()
+    $inputs->add('revision', Schema::integer()
       ->title(t('Revision'))
       ->default(1)
       ->minimum(1));
-    $inputs->addSchema('published', Schema::bool()
+    $inputs->add('published', Schema::bool()
       ->title(t('Published'))
       ->default(FALSE));
     $inputs->attach('archive', ArchiveStructure::class, t('Archive'));
