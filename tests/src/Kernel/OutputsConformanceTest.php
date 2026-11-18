@@ -287,7 +287,8 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
     ];
     foreach ($items as $what => $item) {
       try {
-        (new ResourceBlueprint(new SurfaceBuilder(), $typed, TRUE))->add('rows', Schema::list($item->with('type', ['object', 'null'])));
+        $nullable = Schema::list($item->with('type', ['object', 'null']));
+        (new ResourceBlueprint(new SurfaceBuilder(), $typed, TRUE))->add('rows', $nullable);
         $this->fail(sprintf('Null items of %s are refused.', $what));
       }
       catch (\InvalidArgumentException $e) {
