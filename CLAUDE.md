@@ -133,8 +133,9 @@ the record of the rework that brought the module to the pattern.
   spelling, never a second contract, either per class, never both
   (example 18,
   `docs/decisions.md#a-class-may-declare-its-keys-as-properties`). A key
-  may also be stated as a Portable Schema, `add(key, Schema,
-  required:)`, read by the schema reader as the author's own
+  is stated as a Portable Schema, `add(key, Schema)`, required where
+  the schema is marked `required()`, read by the schema reader as the
+  author's own
   (`SchemaReader::authored()`: a `drupal:` check the constraint it names,
   an optional key with a default clearable), or, on a property, with the
   package's `#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]`, `#[Required]`,
@@ -150,8 +151,8 @@ the record of the rework that brought the module to the pattern.
   An object is declared only by a method that is one JSON Schema
   construct: `attach()` / `attachList()` (`$ref`), `addMap()` (inline
   object), `mixIn()` (`allOf`), the variants (`if`/`then`),
-  `addEach()` / `attachEach()` (an object keyed by the site), `addList()`
-  (array);
+  `addEach()` / `attachEach()` (an object keyed by the site), `add()`
+  with `Schema::list()` (array);
   `addDefinition()` takes one value and refuses a map or a list
   (`docs/decisions.md#a-blueprint-takes-no-complex-data-types`).
 - **Anonymous map**: `addMap($key, $label, fn (BlueprintInterface $map)
@@ -185,7 +186,7 @@ the record of the rework that brought the module to the pattern.
 - **Attach**: a fixed child at a key, `attach()`; an alter attaches only
   at its own mount, `third_party_settings.<module>`, as an adapter.
 - **Port**: a value a structure reads from its container, declared under
-  a name of its own with `$inputs->reads('capacity', 'integer')` and
+  a name of its own with `$inputs->reads('capacity', Schema::integer())` and
   wired by the container with `attach(..., reads: ['capacity' =>
   'seats'])`; a live sibling value, never stored by the structure.
 - **Mixin**: a structure whose members are merged into the owner's own
@@ -296,12 +297,12 @@ the record of the rework that brought the module to the pattern.
   gives the values (`docs/reading-a-schema.md#config-schema`).
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
-  key, `addEach('forms', 'boolean', from: Provider::class, label:
-  t('Forms'))` (a value of a type or shape per thing, its label
-  required, or of an entry definition as `addList()` takes an item; a
-  reference per thing is that definition with the reference constraint,
-  `addEach('pages', DataDefinition::create('integer')->addConstraint(
-  'SurfaceValidReference', ['entityTypeId' => 'node']), from:
+  key, `addEach('forms', Schema::bool()->default(FALSE), from:
+  Provider::class, label: t('Forms'))` (the schema of one value or a
+  shape per thing, `Schema::of(Shape::class)`, its label required; a
+  reference per thing is that schema with the reference check,
+  `addEach('pages', Schema::integer()->check(
+  'drupal:SurfaceValidReference', ['entityTypeId' => 'node']), from:
   Provider::class, label: t('Pages'))`, `#[Each('integer', ...)]` with
   `#[Schema(additionalProperties: ['portable-check' => [...]])]` as a
   property) or `attachEach('rows',
@@ -315,9 +316,9 @@ the record of the rework that brought the module to the pattern.
   same id in a sibling map from the same provider
   (`docs/resources.md#keys-that-come-from-the-site`).
 - **Reference key**: a key that refers to an entity, the id's type with
-  the constraint every reader reads: `add('page', 'integer', t(...))
-  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node',
-  'bundles' => ['article']])`, the type checked against the entity
+  the constraint every reader reads: `add('page', Schema::integer()
+  ->title(t(...))->check('drupal:SurfaceValidReference', ['entityTypeId'
+  => 'node', 'bundles' => ['article']]))`, the type checked against the entity
   type's id at build (`References::settle()`, from
   `Declaring::settleReferences()`, which also marks a content entity's
   key, `References::CONTENT`, and checks the definition an `addEach()`
@@ -348,8 +349,8 @@ the record of the rework that brought the module to the pattern.
   autocomplete where its form display uses core's
   (`docs/decisions.md#a-reference-field-is-a-reference-key`).
 - **Computed key**: a key of a resource whose value nobody types,
-  `$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using:
-  Slugify::class, when: Compute::ON_CREATE)`; the class implements
+  `$inputs->compute('slug', Schema::string()->title(t('Slug')), from: ['label'],
+  using: Slugify::class, when: Compute::ON_CREATE)`; the class implements
   `ComputesValueInterface`, a static `compute(array $from, ?Schema $key = NULL)`, `$key` the key's schema (its standard keywords through `get()`),
   run under the static guard (one allowance: `MachineName` may use the
   `transliteration` service, `PipelineGuard::COMPUTE_ALLOWED`). Computed in `accept()` from the accepted sources while storage
