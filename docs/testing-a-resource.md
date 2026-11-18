@@ -111,8 +111,8 @@ process, as every kernel test here is.
 ## See also
 
 - `Drupal\Tests\surface\Kernel\FirstResourceInvariantsTest`, this
-  module's own use of it, for the [first](first-resource.md) and
-  [second](second-resource.md) resources.
+  module's own use of it, for the [second](second-resource.md) resource
+  (`first.store`; slice 35's pruning cut it to that one, 2026-11-18).
 - [The site's catalog](catalog-command.md), to find the ids, the doors
   and what did not build.
 - An adopter's tests hold the invariants

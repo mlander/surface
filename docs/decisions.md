@@ -16657,11 +16657,12 @@ answered as a runtime failure, found by this base class over example
 14); the tool's shape check now refuses a map or a list sent for a
 scalar key first ([A refusal names what it depends
 on](#a-refusal-names-what-it-depends-on)), and
-`ExamplesSecretsInvariantsTest` holds example 14's mailer and webhook to
-every check.
+`ExamplesSecretsInvariantsTest` held example 14's mailer and webhook to
+every check until slice 35's first pruning deleted it (2026-11-18); the
+hand corpus, `EveryDoorAgreesTest` and `SchemaRoundTripTest` hold them.
 
 (`Tests\surface\Kernel\ResourceTestBase`,
-`FirstResourceInvariantsTest`, `ExamplesSecretsInvariantsTest`,
+`FirstResourceInvariantsTest`,
 `Traits\NeverStricterTrait`,
 `Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,
 `ResourceOperationTool::execute()`, [Testing a resource](testing-a-resource.md))

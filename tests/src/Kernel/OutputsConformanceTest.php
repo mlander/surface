@@ -146,7 +146,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
   public function testNullAtAnOptionalOpenMapIsTaken(): void {
     $surface = OutputCases::handSurface();
     $good = [];
-    foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->outputEntries()->entries() as $name => $entry) {
       $good[(string) $name] = OutputCases::good($entry->schema());
     }
     $this->assertSame([], $this->answer($surface, array_replace($good, ['open' => NULL])));
@@ -194,7 +194,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
     $this->assertSame([['k', 'type']], $this->answer($open, ['k' => ['a', 'b']]));
     // The watched-value check holds a value the same way, and answers.
     $check = $this->container->get('surface.watched_value_check');
-    $schema = $surface->getOutputDefinitions()->entry('k')->schema();
+    $schema = $surface->outputEntries()->entry('k')->schema();
     $this->assertTrue($check->admits($schema, ['1' => 'b']));
     $this->assertTrue($check->admits($schema, ['0' => 'a']));
     $this->assertFalse($check->admits($schema, ['2' => 'c']));
@@ -249,7 +249,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
     // input secrets path leaves them out of what is read back.
     $builder = new SurfaceBuilder();
     (new ResourceBlueprint($builder, $typed, FALSE))->add('items', Schema::list(Schema::string()->writeOnly(TRUE)));
-    $item = DefinitionSchema::itemOf($builder->seal()->getDefinitions()->entry('items')->schema());
+    $item = DefinitionSchema::itemOf($builder->seal()->entries()->entry('items')->schema());
     $this->assertNotNull($item);
     $this->assertTrue(Secrets::marked($item));
   }

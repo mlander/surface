@@ -1262,8 +1262,10 @@ phpunit: Tests: 2618, Assertions: 103341, Errors: 0, Failures: 0, Skipped: 3. Cl
 the same counts a plain phpunit run of the tree gives. The skipped
 tests are the round trips `ResourceTestBase` reports by kind, as it
 reports a document that cannot read back to itself:
-`FirstResourceInvariantsTest`'s store location (a coded refiner) and
-`ExamplesSecretsInvariantsTest`'s mailer and webhook. `run-tests.sh`
+`FirstResourceInvariantsTest`'s store location (a coded refiner).
+`ExamplesSecretsInvariantsTest` was deleted in slice 35's first pruning
+(2026-11-18); the hand corpus, `EveryDoorAgreesTest` and
+`SchemaRoundTripTest` hold example 14's mailer and webhook. `run-tests.sh`
 prints one line per class counting passed tests only, so `check.sh`
 reads the counts from the JUnit log each class's phpunit writes, and
 checks them against the classes `run-tests.sh` listed. A failure or an
