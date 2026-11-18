@@ -29,7 +29,7 @@
     },
     "plain | values": {
       "stored": "f73dd3e12360",
-      "narrow": "fb0fe08822e3"
+      "narrow": "8b13c3da5540"
     },
     "plain | key": {
       "gate": "b1b12fd14ace",
@@ -143,15 +143,15 @@
       ],
       "fromSurface refined": {
         "thrown": "LogicException",
-        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference check were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
       },
       "secrets refined": {
         "thrown": "LogicException",
-        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference check were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
       },
       "secretKeys refined": {
         "thrown": "LogicException",
-        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference check were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
       },
       "pathsOf": {
         "gate": "narrow"
@@ -169,7 +169,7 @@
       "flat": null,
       "panel": {
         "thrown": "LogicException",
-        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference check were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
       },
       "formatter": [
         {
