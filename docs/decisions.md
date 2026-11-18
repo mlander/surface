@@ -7105,11 +7105,9 @@ output entries' schemas, in the input path's codes.
   `accept()` reads what a form posts (a form's `"1"` is `TRUE`) and
   written as the document holds it (a date and time with its offset); a
   float the table leaves a float is not handed to a refiner typed for an
-  integer. *Open, revisit in slice 35:* a scalar at a string key (`TRUE`)
-  is read as its text and handed over, as Typed Data's string took any
-  scalar, since the value baseline pins it (`values_test.keys`, gate
-  `TRUE` and `FALSE`). It applies to the watched-value check alone, never
-  to a site's or a route's value (next point). A string
+  integer. A scalar other than a string at a string key (`TRUE`) is
+  refused with `type`, as `validate()` and `KeyPaths` refuse it, and no
+  refiner is handed it (decided in slice 35, see [Slice 35 verdicts](#slice-35-verdicts)). A string
   at a key that holds a list of field items, which Typed Data let
   through, is withheld now; and a value whose check threw Symfony's
   `UnexpectedTypeException` out of `accept()` (`TRUE` at a block's
@@ -16631,3 +16629,15 @@ every check.
 `Traits\NeverStricterTrait`,
 `Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,
 `ResourceOperationTool::execute()`, [Testing a resource](testing-a-resource.md))
+
+## Slice 35 verdicts
+
+### A scalar at a string key is refused at the watched-value check
+
+Decided 2026-11-17. The watched-value check read a scalar other than a
+string at a string key (`TRUE`) as its text and handed it to the
+refiner, as Typed Data's string took any scalar. It now leaves the value
+as it is, and the validator refuses it with `type`, as `validate()` and
+`KeyPaths` refuse it: a refiner does not compute an answer for a value
+the same request then refuses, and every door reads the value by one
+rule. (`WatchedValueCheck::written()`)
