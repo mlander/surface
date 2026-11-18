@@ -167,9 +167,11 @@ class TypedDataFootprintTest extends UnitTestCase {
    * Lowered on 2026-11-17 to 88: the verbs replay writes the keys of the
    * examples as schemas, so CateringByMethodResource, DoorsResource,
    * WebhookResource, PastedCredentialStructure, ExampleFormatter and
-   * ExampleBlockStructure name no Typed Data.
+   * ExampleBlockStructure name no Typed Data. Lowered on 2026-11-17 to 86:
+   * a list of objects at an output is read as a list of maps, so
+   * VenueListingStructure and RetitleResource name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 88;
+  public const OUTSIDE_THE_EDGES = 86;
 
   /**
    * Finds the files that use Typed Data.
