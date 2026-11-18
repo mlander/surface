@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -20,6 +21,7 @@ use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Refinement\WatchedValueCheck;
 use Drupal\surface\Surface;
 use PortableSchema\Builder\Schema;
@@ -723,7 +725,11 @@ final class KeyPaths {
     }
     foreach ($this->pipeline->conformOutput(Surface::holding($checked), ['value' => WatchedValueCheck::spelled($checked, $value)]) as $violation) {
       $at = $violation->path;
-      return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->message);
+      $label = $violation->message instanceof TranslatableMarkup ? $violation->message->getArguments()['@label'] ?? NULL : NULL;
+      // A required property left out is said in the words of a value at a
+      // key, not those of an output that was not emitted.
+      $message = $violation->code === Violation::REQUIRED && $label !== NULL ? sprintf('%s is required.', $label) : strip_tags((string) $violation->message);
+      return ($at === '' ? '' : $at . ': ') . $message;
     }
     return NULL;
   }

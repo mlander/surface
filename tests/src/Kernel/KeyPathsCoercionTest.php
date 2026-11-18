@@ -215,6 +215,23 @@ class KeyPathsCoercionTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a required property a default leaves out is said as required.
+   *
+   * The words of a value at a key, not of an output that was not emitted.
+   */
+  public function testRequiredInsideIsSaidAsRequired(): void {
+    $row = MapDataDefinition::create()->setLabel('Row')
+      ->setPropertyDefinition('id', DataDefinition::create('string')->setLabel('Id')->setRequired(TRUE));
+    try {
+      $this->held(new ListDataDefinition([], $row), [[]]);
+      $this->fail('A row without its id is refused.');
+    }
+    catch (ValueNotAcceptedException $e) {
+      $this->assertStringEndsWith('which the key does not accept: 0.id: Id is required.', $e->getMessage());
+    }
+  }
+
+  /**
    * Reads one value as a site default for a key.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
