@@ -17,6 +17,7 @@ use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\ResourceBuild\BlueprintAdapterBase;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\Variants;
 use Drupal\surface\Variants\ConfigSchemaTypes;
@@ -192,8 +193,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
     }
     $strict = array_key_exists('FullyValidatable', (array) ($this->typedConfig->getDefinition($fallback)['constraints'] ?? []));
     $this->mapping($inputs, $keys, $fallback, '', $strict, $reading);
-    $inputs->attachVariants(self::CHOSEN, by: $by, from: ConfigSchemaTypes::class, arguments: ['type' => $named])
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants(self::CHOSEN, by: $by, from: ConfigSchemaTypes::class, arguments: ['type' => $named], storedAs: Variants::FLAT);
   }
 
   /**
@@ -520,16 +520,18 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
         // A mapping's default is its keys' defaults, laid inside it.
         $inside = is_array($defaults[$key] ?? NULL) ? $defaults[$key] : [];
         if ($this->isNamedMapping($named, $property)) {
-          $shell = $inputs->attach($key, $this->structure($this->determine($named) ?? $named, '', '', $inside), $label);
+          $inputs->attach($key, $this->structure($this->determine($named) ?? $named, '', '', $inside), $label);
           $reading->structure($here, static::id($this->determine($named) ?? $named));
         }
         else {
           $inner = new Reading();
-          $shell = $inputs->addMap($key, $label ?? $key, function (BlueprintInterface $map) use ($merged, $type, $full, $strict, $inner, $inside): void {
+          $inputs->addMap($key, $label ?? $key, function (BlueprintInterface $map) use ($merged, $type, $full, $strict, $inner, $inside): void {
             $this->mapping($map, (array) ($merged['mapping'] ?? []), $type, $full, $strict, $inner, '', $inside);
           });
           $reading->nest($here, $inner);
         }
+        $shell = BlueprintAdapterBase::of($inputs)->shellAt($key);
+        assert($shell instanceof DataDefinition);
         $this->carryOnMap($shell, $merged, $reading, $here);
         if ($required) {
           $shell->setRequired(TRUE);
@@ -661,7 +663,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           ? [$this->determine($named) ?? $named, '']
           : [$type, $full . '.*'];
         $this->defaultNotLaid($defaults, $key, $reading, $here, 'a list of structures takes no default');
-        $list = $inputs->attachList($key, $this->structure(...$structure), $label, $bounds['min'] ?? NULL, $bounds['max'] ?? NULL);
+        $list = BlueprintAdapterBase::of($inputs->attachList($key, $this->structure(...$structure), $label, $bounds['min'] ?? NULL, $bounds['max'] ?? NULL))->shellAt($key);
         if ($bounds !== NULL) {
           unset($merged['constraints']['Count']);
         }
@@ -674,7 +676,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           $this->open($inputs, $key, $label, $required, $reading, $here, 'A sequence of sequences of groups of keys: a list item that is a list of structures has no verb, so the key is declared open, holding any value.');
           return;
         }
-        $list = $inputs->addList($key, new ListDataDefinition([], $leaf), $label ?? $key, $this->defaultOf($defaults, $key, 'array', $reading, $here));
+        $list = BlueprintAdapterBase::of($inputs->addList($key, new ListDataDefinition([], $leaf), $label ?? $key, $this->defaultOf($defaults, $key, 'array', $reading, $here)))->shellAt($key);
       }
       elseif ($this->isA($item_merged, Ignore::class) || $this->isA($item_merged, Undefined::class)) {
         $this->open($inputs, $key, $label, $required, $reading, $here . '.*', sprintf('Of the type %s: the schema checks nothing here, so the list is declared open, holding any value.', $named));
@@ -687,7 +689,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           $this->open($inputs, $key, $label, $required, $reading, $here);
           return;
         }
-        $list = $inputs->addList($key, $value, $label ?? $key, $this->defaultOf($defaults, $key, 'array', $reading, $here));
+        $list = BlueprintAdapterBase::of($inputs->addList($key, $value, $label ?? $key, $this->defaultOf($defaults, $key, 'array', $reading, $here)))->shellAt($key);
       }
     }
     // Declared open by named(), labeled there: nothing of the list holds.
@@ -742,10 +744,10 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           $reading->expression($here, $named, 'parent', $by, 'open');
           return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by "%s", which this mapping holds as no value: variants are chosen by a sibling of one value, so the key is declared open, holding any value.', $by));
         }
-        $shell = $inputs->attachVariants($key, by: $by, label: $label, from: ConfigSchemaTypes::class, arguments: [
+        $shell = BlueprintAdapterBase::of($inputs->attachVariants($key, by: $by, label: $label, from: ConfigSchemaTypes::class, arguments: [
           'type' => $type,
           'path' => $full,
-        ]);
+        ]))->shellAt($key);
         $reading->expression($here, $named, 'parent', $by, 'variants');
         return $shell;
 
@@ -759,7 +761,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
         // One structure for the expression (ownKey()): the fallback's keys
         // and the variants at CHOSEN.
         $structure = $this->structure($named);
-        $declared = $item ? $inputs->attachList($key, $structure, $label) : $inputs->attach($key, $structure, $label);
+        $declared = BlueprintAdapterBase::of($item ? $inputs->attachList($key, $structure, $label) : $inputs->attach($key, $structure, $label))->shellAt($key);
         $reading->structure($here, static::id($named));
         $reading->expression($here, $named, 'own key', $by, 'variants');
         return $declared;

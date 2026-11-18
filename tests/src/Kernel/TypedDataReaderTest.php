@@ -76,10 +76,10 @@ class TypedDataReaderTest extends SurfaceKernelTestBase {
     $report = [];
     foreach (self::FIELDS as $name => [$bundle, $field_name]) {
       $field = $fields->getFieldDefinitions('node', $bundle)[$field_name];
-      $inputs = new RecordingBlueprint();
+      $inputs = new RecordingBlueprint($this->container->get('typed_data_manager'));
       $reading = $reader->read($field, $inputs);
       $derived = $derivation->describe($field, $bundle);
-      $direct = array_filter($inputs->keys, static fn (array $record): bool => $record['verb'] === 'addDefinition');
+      $direct = array_filter($inputs->recorded, static fn (array $record): bool => $record['verb'] === 'addDefinition');
       // The derivation's keys are a subset: every key it carries, the
       // reader declares too.
       $this->assertSame([], array_values(array_diff(array_keys($derived), array_keys($direct))), $name . ': every key the derivation carries is read.');
@@ -105,9 +105,9 @@ class TypedDataReaderTest extends SurfaceKernelTestBase {
     }
 
     // The reference key, read from the computed reference beside the id.
-    $tags = new RecordingBlueprint();
+    $tags = new RecordingBlueprint($this->container->get('typed_data_manager'));
     $reader->read($fields->getFieldDefinitions('node', 'page')['field_tags'], $tags);
-    $this->assertSame(['entityTypeId' => 'taxonomy_term'], $tags->keys['target_id']['definition']->getConstraints()['SurfaceValidReference']);
+    $this->assertSame(['entityTypeId' => 'taxonomy_term'], $tags->recorded['target_id']['definition']->getConstraints()['SurfaceValidReference']);
   }
 
   /**
@@ -124,20 +124,20 @@ class TypedDataReaderTest extends SurfaceKernelTestBase {
       ->setPropertyDefinition('owner', DataReferenceDefinition::create('entity')->setLabel('Owner')->setTargetDefinition(EntityDataDefinition::create('user')))
       ->setPropertyDefinition('slug', DataDefinition::create('string')->setLabel('Slug')->setComputed(TRUE))
       ->setPropertyDefinition('code', DataDefinition::create('string')->setLabel('Code')->setReadOnly(TRUE));
-    $inputs = new RecordingBlueprint();
+    $inputs = new RecordingBlueprint($this->container->get('typed_data_manager'));
     $reading = $this->container->get(TypedDataReader::class)->read($map, $inputs);
 
-    $this->assertSame(['name', 'address', 'tags', 'owner', 'code'], array_keys($inputs->keys));
-    $this->assertSame(['addDefinition', 'addMap', 'addList', 'addDefinition', 'addDefinition'], array_column($inputs->keys, 'verb'));
-    $this->assertTrue($inputs->keys['name']['definition']->isRequired());
-    $this->assertSame(['max' => 20], $inputs->keys['name']['definition']->getConstraints()['Length']);
-    $this->assertSame(['city', 'zip'], array_keys($inputs->keys['address']['map']->keys));
-    $this->assertSame(['min' => 1], $inputs->keys['address']['map']->keys['zip']['definition']->getConstraints()['Range']);
-    $tags = $inputs->keys['tags']['definition'];
+    $this->assertSame(['name', 'address', 'tags', 'owner', 'code'], array_keys($inputs->recorded));
+    $this->assertSame(['addDefinition', 'addMap', 'addList', 'addDefinition', 'addDefinition'], array_column($inputs->recorded, 'verb'));
+    $this->assertTrue($inputs->recorded['name']['definition']->isRequired());
+    $this->assertSame(['max' => 20], $inputs->recorded['name']['definition']->getConstraints()['Length']);
+    $this->assertSame(['city', 'zip'], array_keys($inputs->recorded['address']['map']->recorded));
+    $this->assertSame(['min' => 1], $inputs->recorded['address']['map']->recorded['zip']['definition']->getConstraints()['Range']);
+    $tags = $inputs->recorded['tags']['definition'];
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $tags);
     $this->assertSame('string', $tags->getItemDefinition()->getDataType());
-    $this->assertSame('integer', $inputs->keys['owner']['definition']->getDataType());
-    $this->assertSame(['entityTypeId' => 'user'], $inputs->keys['owner']['definition']->getConstraints()['SurfaceValidReference']);
+    $this->assertSame('integer', $inputs->recorded['owner']['definition']->getDataType());
+    $this->assertSame(['entityTypeId' => 'user'], $inputs->recorded['owner']['definition']->getConstraints()['SurfaceValidReference']);
     $this->assertSame(['Computed: no value of its own is stored.'], $reading->left()['slug']);
     $this->assertStringStartsWith('Read only:', $reading->left()['code'][0]);
   }

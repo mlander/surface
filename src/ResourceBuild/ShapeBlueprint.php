@@ -6,8 +6,6 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Surface;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Narrowing;
@@ -66,42 +64,42 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function add(string $key, Schema|string $schema, string|\Stringable|null $label = NULL, mixed $default = NULL): DataDefinition|static {
+  public function add(string $key, Schema $schema): static {
     throw $this->refused(sprintf('add("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): static {
     throw $this->refused(sprintf('addMap("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
     throw $this->refused(sprintf('addDefinition("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition {
+  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): static {
     throw $this->refused(sprintf('addList("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): static {
     throw $this->refused(sprintf('attach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): static {
     throw $this->refused(sprintf('attachList("%s")', $key));
   }
 

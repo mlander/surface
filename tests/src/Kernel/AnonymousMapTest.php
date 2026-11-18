@@ -19,6 +19,7 @@ use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests addMap(): an object inline, plain or holding structures.
@@ -197,7 +198,7 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
   public function testWhereNoStructureCanStandItIsRefused(): void {
     $typed = $this->container->get('typed_data_manager');
     $attaching = static function (BlueprintInterface $map): void {
-      $map->add('label', 'string', 'Label');
+      $map->add('label', Schema::string()->title('Label'));
       $map->attach('bench', BenchStructure::class);
     };
     $refused = function (callable $call, string $said): void {
@@ -220,7 +221,7 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
 
     // Plain keys are a map wherever one is declared.
     $alter->addMap('plain', 'Plain', static function (BlueprintInterface $map): void {
-      $map->add('label', 'string', 'Label', default: 'x');
+      $map->add('label', Schema::string()->title('Label')->default('x'));
     });
     $this->assertSame(['plain'], $alter->keys());
   }

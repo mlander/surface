@@ -9,11 +9,16 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\Compute;
+use Drupal\surface\ResourceBuild\BlueprintAdapterBase;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\Variants;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -21,16 +26,49 @@ use PortableSchema\Builder\Schema;
  *
  * What a reader declares, read without a build: each key's verb, its
  * definition, and what it names (a structure, a provider and its
- * arguments, a map's own keys).
+ * arguments, a map's own keys). An adapter of the module, so a reader
+ * reaches what a verb declared (BlueprintAdapterBase::shellAt()) as it
+ * does on a build's blueprint.
  */
-final class RecordingBlueprint implements BlueprintInterface {
+final class RecordingBlueprint extends BlueprintAdapterBase implements BlueprintInterface {
 
   /**
    * Each key declared, in order.
    *
    * @var array<string, array{verb: string, definition: \Drupal\Core\TypedData\DataDefinitionInterface, child?: string, by?: string, from?: string|null, arguments?: array, default?: mixed, map?: \Drupal\Tests\surface\Kernel\Reader\RecordingBlueprint}>
    */
-  public array $keys = [];
+  public array $recorded = [];
+
+  /**
+   * Constructs a blueprint over a builder of its own, which it never fills.
+   *
+   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
+   *   The typed data manager.
+   */
+  public function __construct(TypedDataManagerInterface $typedDataManager) {
+    parent::__construct(new SurfaceBuilder(), $typedDataManager);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function shellAt(string $key): DataDefinitionInterface {
+    return $this->recorded[$key]['definition'] ?? throw new \LogicException(sprintf('Nothing was declared at "%s".', $key));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function declare(string $key, DataDefinitionInterface $definition, mixed $default): void {
+    $this->record($key, 'declare', $definition, ['default' => $default]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function isDeclared(string $key): bool {
+    return isset($this->recorded[$key]);
+  }
 
   /**
    * Records a key.
@@ -48,10 +86,10 @@ final class RecordingBlueprint implements BlueprintInterface {
    *   The definition.
    */
   protected function record(string $key, string $verb, DataDefinitionInterface $definition, array $more = []): DataDefinitionInterface {
-    if (isset($this->keys[$key])) {
+    if (isset($this->recorded[$key])) {
       throw new \LogicException(sprintf('"%s" is declared twice.', $key));
     }
-    $this->keys[$key] = ['verb' => $verb, 'definition' => $definition] + $more;
+    $this->recorded[$key] = ['verb' => $verb, 'definition' => $definition] + $more;
     return $definition;
   }
 
@@ -70,7 +108,7 @@ final class RecordingBlueprint implements BlueprintInterface {
    * @phpstan-param T $definition
    * @phpstan-return T
    */
-  private static function labeled(DataDefinition $definition, string|\Stringable|null $label): DataDefinition {
+  protected static function labeled(DataDefinition $definition, string|\Stringable|null $label): DataDefinition {
     if ($label !== NULL) {
       $definition->setLabel($label);
     }
@@ -80,28 +118,29 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): static {
     $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attachVariants', $map, ['by' => $by, 'from' => $from, 'arguments' => $arguments]);
-    return $map;
+    static::stated($map, $description, $required, $storedAs, Variants::STORED_AS);
+    return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addEach(string $key, Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): static {
     $map = MapDataDefinition::create()->setLabel($label);
     $this->record($key, 'addEach', $map, ['from' => $from]);
-    return $map;
+    return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): static {
     $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attachEach', $map, ['child' => $structure, 'from' => $from]);
-    return $map;
+    return $this;
   }
 
   /**
@@ -114,14 +153,9 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
-    if ($type instanceof Schema) {
-      $this->record($key, 'compute', DataDefinition::create('any'));
-      return $this;
-    }
-    $definition = DataDefinition::create($type)->setLabel($label);
-    $this->record($key, 'compute', $definition);
-    return $definition;
+  public function compute(string $key, Schema $schema, array $from = [], string $using = '', string $when = Compute::ON_CREATE): static {
+    $this->record($key, 'compute', DataDefinition::create('any'));
+    return $this;
   }
 
   /**
@@ -134,44 +168,40 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function add(string $key, Schema|string $schema, string|\Stringable|null $label = NULL, mixed $default = NULL): DataDefinition|static {
-    if ($schema instanceof Schema) {
-      // Read into this blueprint, so the verbs the schema stands for are
-      // written down.
-      SchemaReader::authored($this, $key, $schema);
-      return $this;
-    }
-    $definition = DataDefinition::create($schema)->setLabel($label ?? '');
-    $this->record($key, 'add', $definition, ['default' => $default]);
-    return $definition;
+  public function add(string $key, Schema $schema): static {
+    // Read into this blueprint, so the verbs the schema stands for are
+    // written down.
+    SchemaReader::authored($this, $key, $schema);
+    return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): static {
     $map = MapDataDefinition::create()->setLabel($label);
-    $inner = new self();
+    $inner = new self($this->typedDataManager);
     $define($inner);
     $this->record($key, 'addMap', $map, ['map' => $inner]);
-    return $map;
+    return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition {
+  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): static {
     $list = new ListDataDefinition([], is_string($item) ? DataDefinition::create($item) : $item);
     $list->setLabel($label);
     $this->record($key, 'addList', $list);
-    return $list;
+    return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
-    return $this->record($key, 'addDefinition', $definition, ['default' => $default]);
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
+    $this->record($key, 'addDefinition', $definition, ['default' => $default]);
+    return $this;
   }
 
   /**
@@ -184,19 +214,21 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): static {
     $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attach', $map, ['child' => $structure]);
-    return $map;
+    static::stated($map, $description, $required, $storedAs, References::STORED_AS, $widget);
+    return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): static {
     $list = self::labeled(new ListDataDefinition([], MapDataDefinition::create()), $label);
     $this->record($key, 'attachList', $list, ['child' => $structure]);
-    return $list;
+    static::stated($list, $description, $required);
+    return $this;
   }
 
   /**
@@ -237,13 +269,28 @@ final class RecordingBlueprint implements BlueprintInterface {
    *   Each key's record, by dotted path.
    */
   public function walk(string $at = ''): \Generator {
-    foreach ($this->keys as $key => $record) {
+    foreach ($this->recorded as $key => $record) {
       $path = $at === '' ? $key : $at . '.' . $key;
       yield $path => $record;
       if (isset($record['map'])) {
         yield from $record['map']->walk($path);
       }
     }
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addEachTyped(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
+    throw new \LogicException(sprintf('addEach("%s") declares keys from the site, which only an owner\'s own blueprint holds.', $key));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function computeTyped(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+    throw new \LogicException(sprintf('compute("%s") declares a computed key, which only an owner\'s own blueprint holds.', $key));
   }
 
 }

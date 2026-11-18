@@ -123,7 +123,7 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
     // generator's add() calls.
     // Decision: see docs/decisions.md#authoring-takes-a-schema.
     $this->assertSame(self::withoutKeys((string) file_get_contents(self::FIRST . '/src/Resource/NewsletterResource.php')), self::withoutKeys($this->written('src/Resource/NewsletterResource.php')), 'src/Resource/NewsletterResource.php differs from the shipped module beside its keys.');
-    $this->assertStringContainsString("\$inputs->add(self::SENDER_NAME, 'string', t('Sender name'))", $this->written('src/Resource/NewsletterResource.php'));
+    $this->assertStringContainsString("\$inputs->add(self::SENDER_NAME, Schema::string()\n      ->title(t('Sender name'))", $this->written('src/Resource/NewsletterResource.php'));
     foreach ([
       'src/Storage/NewsletterStorage.php',
       'config/install/surface_examples_first.newsletter.yml',
@@ -197,8 +197,10 @@ PHP, $this->written('src/Resource/NewsletterResource.php'), 'The interview names
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::USE_ADMIN_THEME, 'boolean', t('Use administration theme when editing or creating content'), default: TRUE)
-      ->setRequired(TRUE);
+    $inputs->add(self::USE_ADMIN_THEME, Schema::bool()
+      ->title(t('Use administration theme when editing or creating content'))
+      ->default(TRUE)
+      ->required());
   }
 PHP, $resource, 'Required in a fully validatable object, its default the value the site holds; _core and langcode are the storage\'s.');
     $this->assertStringContainsString("#[Resource('node.settings',\n  label: new TranslatableMarkup('Node settings'),\n  storage: NodeSettingsStorage::class,\n)]", $resource, 'The label the interview offers, from the config schema\'s.');
@@ -229,8 +231,8 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
       '', '', '',
     ], ['--from-config-schema' => 'system.site'], $out);
     $resource = $this->written('src/Resource/SiteResource.php', $out);
-    $this->assertStringContainsString("\$inputs->add(self::UUID, 'string'", $resource);
-    $this->assertStringContainsString("\$inputs->add(self::MAIL, 'email'", $resource);
+    $this->assertStringContainsString("\$inputs->add(self::UUID, Schema::string()\n      ->title(t('Site UUID'))\n      ->format('uuid')", $resource);
+    $this->assertStringContainsString("\$inputs->add(self::MAIL, Schema::string()\n      ->title(t('Email address'))\n      ->format('email')", $resource);
     $this->assertStringNotContainsString('states Uuid', $resource);
     $this->assertStringNotContainsString('states Email', $resource);
     $this->assertStringContainsString('5 comments in the class name what was not written from the config schema of system.site', $display);
@@ -258,22 +260,26 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
     ], ['--from-json-schema' => dirname(__DIR__, 3) . '/modules/surface_examples/components/card/card.component.yml'], $out);
     $resource = $this->written('src/Resource/CardResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->add(self::HEADING, 'string', t('Heading'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 80]);
+    $inputs->add(self::HEADING, Schema::string()
+      ->title(t('Heading'))
+      ->maxLength(80)
+      ->required());
 
-    $inputs->add(self::TONE, 'string', t('Tone'), default: 'plain')
-      ->addConstraint('LabeledChoice', [
-        'labels' => [
-          'plain' => t('Plain'),
-          'highlight' => t('Highlighted'),
-        ],
-      ]);
+    $inputs->add(self::TONE, Schema::options([
+      'plain' => t('Plain'),
+      'highlight' => t('Highlighted'),
+    ])
+      ->title(t('Tone'))
+      ->default('plain'));
 
-    $inputs->addMap(self::LINK, t('Link'), function (BlueprintInterface $map): void {
-      $map->add('url', 'uri', t('Address'));
-      $map->add('label', 'string', t('Link text'));
-    });
+    $inputs->add(self::LINK, Schema::object([
+      'url' => Schema::string()
+        ->title(t('Address'))
+        ->format('uri'),
+      'label' => Schema::string()
+        ->title(t('Link text')),
+    ])
+      ->title(t('Link')));
 PHP, $resource);
     $this->assertStringContainsString("public const ALWAYS_HELD = ['tone'];", $this->written('src/Storage/CardStorage.php', $out), 'An optional key that refuses null and has a default is one its storage always holds.');
     $schema = $this->written('config/schema/surface_examples_first.schema.yml', $out);
@@ -295,55 +301,58 @@ PHP, $resource);
     ], ['--from-json-schema' => dirname(__DIR__, 2) . '/fixtures/generator/event.schema.json'], $out);
     $resource = $this->written('src/Resource/EventResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->add(self::KIND, 'string', t('Kind'), default: 'meetup')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['meetup', 'conference']]);
-PHP, $resource, 'An enum is a Choice.');
+    $inputs->add(self::KIND, Schema::enum(['meetup', 'conference'])
+      ->title(t('Kind'))
+      ->default('meetup')
+      ->required());
+PHP, $resource, 'An enum is the enum it was read from.');
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->add(self::SLUG, 'string', t('Slug'))
-      ->addConstraint('Regex', ['pattern' => '/^[a-z0-9-]+$/D']);
+    $inputs->add(self::SLUG, Schema::string()
+      ->title(t('Slug'))
+      ->check('drupal:Regex', ['pattern' => '/^[a-z0-9-]+$/D']));
 
     $inputs->attach(self::VENUE, VenueStructure::class, t('Venue'));
 
-    $inputs->addMap(self::CONTACT, t('Contact'), function (BlueprintInterface $map): void {
+    $inputs->add(self::CONTACT, Schema::object([
 PHP, $resource, 'A $ref to a scalar def is read in place; one to an object def is a structure of its own; a nested object is a map.');
     $this->assertStringContainsString(<<<'PHP'
     // From the schema, not written here: multipleOf on self::SEATS, which no
     // constraint here states; the reader keeps it as a JsonSchema constraint.
     // Write a constraint for it.
-    $inputs->add(self::SEATS, 'integer', t('Seats'))
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add(self::SEATS, Schema::integer()
+      ->title(t('Seats'))
+      ->minimum(1));
 PHP, $resource, 'A foreign constraint is a comment naming the keyword and the key by its constant.');
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->addList(self::TAGS, 'string', t('Tags'))
-      ->addConstraint('UniqueItems', []);
+    $inputs->add(self::TAGS, Schema::list(Schema::string())
+      ->title(t('Tags'))
+      ->uniqueItems(TRUE));
 
     $inputs->narrow(self::SEATS)
       ->when(Condition::equals(self::KIND, 'conference'))
       ->require();
 PHP, $resource, 'uniqueItems is the stock UniqueItems; the if/then is a declared rule.');
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->add(self::LEVEL, 'integer', t('Level'))
-      ->addConstraint('LabeledChoice', [
-        'labels' => [
-          1 => t('Open'),
-          2 => t('Invited'),
-        ],
-      ]);
+    $inputs->add(self::LEVEL, Schema::options([
+      1 => t('Open'),
+      2 => t('Invited'),
+    ])
+      ->title(t('Level')));
 
-    $inputs->add(self::SIZE, 'string', t('Size'))
-      ->addConstraint('LabeledChoice', [
+    $inputs->add(self::SIZE, Schema::string()
+      ->title(t('Size'))
+      ->check('drupal:LabeledChoice', [
         'choices' => ['1', '2'],
         'labels' => [
           1 => t('Small'),
           2 => t('Large'),
         ],
-      ]);
-PHP, $resource, 'A labeled choice is its labels alone, unless a value is a numeric string, which PHP would key as an integer.');
+      ]));
+PHP, $resource, 'A labeled choice is Schema::options() of its labels, unless a value is a numeric string, which PHP would key as an integer.');
     $structure = $this->written('src/Structure/VenueStructure.php', $out);
     $this->assertStringContainsString("#[Structure('first.event.venue')]", $structure);
     $this->assertStringContainsString("  public const CITY = 'city';\n  public const CAPACITY = 'capacity';\n\n", $structure, 'A structure names its own keys.');
-    $this->assertStringContainsString("    \$inputs->add(self::CITY, 'string', t('City'))\n      ->setRequired(TRUE);", $structure);
+    $this->assertStringContainsString("    \$inputs->add(self::CITY, Schema::string()\n      ->title(t('City'))\n      ->required());", $structure);
     $this->assertStringContainsString('A comment in the class names what was not written from the JSON Schema', $display);
     $this->assertStringContainsString('/properties/seats/multipleOf: Kept as a JsonSchema constraint', $display);
     $this->assertParses([
@@ -400,13 +409,9 @@ PHP, $resource, 'A labeled choice is its labels alone, unless a value is a numer
     ], ['--from-json-schema' => $schema], $out);
     $resource = $this->written('src/Resource/BookingResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->attachList(self::ROOMS, RoomsStructure::class, t('Rooms'), min: 1, max: 4)
-      ->setDescription(t('The rooms to book.'))
-      ->setRequired(TRUE);
+    $inputs->attachList(self::ROOMS, RoomsStructure::class, t('Rooms'), min: 1, max: 4, description: t('The rooms to book.'), required: TRUE);
 
-    $inputs->attach(self::VENUE, VenueStructure::class, t('Venue'))
-      ->setDescription(t('Where the event is.'))
-      ->setRequired(TRUE);
+    $inputs->attach(self::VENUE, VenueStructure::class, t('Venue'), description: t('Where the event is.'), required: TRUE);
 PHP, $resource, 'A collection keeps its Count, and each key that holds a child its description and its flag.');
   }
 
@@ -463,14 +468,17 @@ final class ClashResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::FOO_BAR, 'string', t('Foo'));
+    $inputs->add(self::FOO_BAR, Schema::string()
+      ->title(t('Foo')));
 
-    $inputs->add(self::FOO_BAR_2, 'string', t('URL of the bar'));
+    $inputs->add(self::FOO_BAR_2, Schema::string()
+      ->title(t('URL of the bar')));
 
     // From the schema, not written here: multipleOf on self::CLASS_2, which no
     // constraint here states; the reader keeps it as a JsonSchema constraint.
     // Write a constraint for it.
-    $inputs->add(self::CLASS_2, 'integer', t('Class'));
+    $inputs->add(self::CLASS_2, Schema::integer()
+      ->title(t('Class')));
 
     $inputs->narrow(self::FOO_BAR_2)
       ->when(Condition::equals(self::FOO_BAR, 'x'))
@@ -488,7 +496,7 @@ PHP, $resource, 'Each key is a constant, in declaration order; every call and co
     $display = $this->generate(['surface_examples_first', 'first.venue', 'Venue', '', '2', 'id'], [], $out, 1);
     $this->assertStringContainsString('A resource with identity (id) is stored in a config entity type', $display);
     // What to write by hand: the title and machine name pair.
-    $this->assertStringContainsString("compute('id', 'machine_name', t('Machine name'), from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)", $display);
+    $this->assertStringContainsString("compute('id', Schema::of('drupal:config/machine_name')->title(t('Machine name')), from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)", $display);
     $this->assertDirectoryDoesNotExist($out . '/src');
   }
 

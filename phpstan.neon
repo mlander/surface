@@ -68,6 +68,11 @@ parameters:
     -
       identifier: new.static
       path: src/Form/SurfaceOperationForm.php
+    # The readers' recording blueprint is an adapter of the module, so a
+    # reader reaches what a verb declared on it as on a build's blueprint.
+    -
+      identifier: classExtendsInternalClass.classExtendsInternalClass
+      path: tests/src/Kernel/Reader/RecordingBlueprint.php
     # An assertion that static analysis can prove today is exactly the
     # assertion that has to fail when the code it guards changes, so
     # these stay in the tests rather than being deleted as redundant.

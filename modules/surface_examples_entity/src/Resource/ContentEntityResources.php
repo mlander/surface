@@ -396,10 +396,12 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    */
   public function defineFields(BlueprintInterface $inputs, string $entity_type_id, string $bundle, array $overridden = []): void {
     foreach ($this->derivation->fields($entity_type_id, $bundle, $overridden)['fields'] as $name => $field) {
-      $child = $inputs->attach($name, 'field.item:' . $entity_type_id . '.' . $bundle . '.' . $name, $field->getLabel());
-      if ((string) $field->getDescription() !== '') {
-        $child->setDescription($field->getDescription());
-      }
+      $inputs->attach(
+        $name,
+        'field.item:' . $entity_type_id . '.' . $bundle . '.' . $name,
+        $field->getLabel(),
+        description: (string) $field->getDescription() !== '' ? $field->getDescription() : NULL,
+      );
     }
 
     $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags($this->derivation->bundleCacheTags($entity_type_id, $bundle)));

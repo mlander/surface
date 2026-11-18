@@ -163,7 +163,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     $pairs = [
       'options' => [
         fn ($i) => $i
-          ->add('k', 'string', 'N')
+          ->addTyped('k', 'string', 'N')
           ->addConstraint('LabeledChoice', ['choices' => ['a' => 'A', 'b' => 'B']]),
         Schema::options(['a' => 'A', 'b' => 'B'])
           ->type('string')
@@ -171,7 +171,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'options int' => [
         fn ($i) => $i
-          ->add('k', 'integer', 'N')
+          ->addTyped('k', 'integer', 'N')
           ->addConstraint('LabeledChoice', ['choices' => [1 => 'One', 2 => 'Two']]),
         Schema::options([1 => 'One', 2 => 'Two'])
           ->type('integer')
@@ -179,7 +179,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'length then regex' => [
         fn ($i) => $i
-          ->add('k', 'string', 'N')
+          ->addTyped('k', 'string', 'N')
           ->addConstraint('Length', ['max' => 9])
           ->addConstraint('Regex', ['pattern' => '/^a/']),
         Schema::string()
@@ -189,7 +189,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'range then choice' => [
         fn ($i) => $i
-          ->add('k', 'integer', 'N')
+          ->addTyped('k', 'integer', 'N')
           ->addConstraint('Range', ['min' => 1])
           ->addConstraint('Choice', ['choices' => [1, 2]]),
         Schema::integer()
@@ -200,6 +200,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       'unique then count' => [
         fn ($i) => $i
           ->addList('k', 'string', 'N')
+          ->shellAt('k')
           ->addConstraint('UniqueItems', [])
           ->addConstraint('Count', ['max' => 3]),
         Schema::list(Schema::string())
@@ -209,7 +210,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'no options' => [
         fn ($i) => $i
-          ->add('k', 'string', 'N')
+          ->addTyped('k', 'string', 'N')
           ->addConstraint('NotBlank'),
         Schema::string()
           ->title('N')
@@ -217,7 +218,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'pattern' => [
         fn ($i) => $i
-          ->add('k', 'string', 'N')
+          ->addTyped('k', 'string', 'N')
           ->addConstraint('Regex', ['pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D', 'message' => $time]),
         Schema::string()
           ->title('N')
@@ -226,7 +227,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'multiline false' => [
         fn ($i) => $i
-          ->add('k', 'string', 'N')
+          ->addTyped('k', 'string', 'N')
           ->setSetting('multiline', FALSE),
         Schema::string()
           ->title('N')
@@ -234,14 +235,14 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'email' => [
         fn ($i) => $i
-          ->add('k', 'email', 'N'),
+          ->addTyped('k', 'email', 'N'),
         Schema::string()
           ->format('email')
           ->title('N'),
       ],
       'required' => [
         fn ($i) => $i
-          ->add('k', 'string', 'N')
+          ->addTyped('k', 'string', 'N')
           ->setRequired(TRUE),
         Schema::string()
           ->title('N')
@@ -289,7 +290,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     $typed = $this->container->get('typed_data_manager');
     $shapes = new Shapes($this->container->get('surface.resource_registry'), $this->container->get('class_resolver'), $this->container->get('config.typed'));
     $builder = new SurfaceBuilder();
-    (new ResourceBlueprint($builder, $typed))->useShapes($shapes)->add('name', 'machine_name', 'Name')->setRequired(TRUE);
+    (new ResourceBlueprint($builder, $typed))->useShapes($shapes)->addTyped('name', 'machine_name', 'Name')->setRequired(TRUE);
     $added = DefinitionSchema::of($builder->getDefinition('name'));
     $read = KeywordReader::forBuild($shapes)->read('name', Schema::of(KeywordReader::CONFIG_TYPE . 'machine_name')->title('Name')->required());
     $this->assertTrue(DefinitionSchema::same($added, $read->schema));
@@ -349,7 +350,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     $blueprint->reads('capacity', Schema::integer()->required());
     $port = $blueprint->ports()['capacity'];
     $this->assertSame(['integer', TRUE], [$port->type, $port->required]);
-    $blueprint->add('label', 'string', 'Label');
+    $blueprint->add('label', Schema::string()->title('Label'));
     $slug = new class implements ComputesValueInterface {
 
       /**

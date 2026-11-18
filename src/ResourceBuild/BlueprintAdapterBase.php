@@ -24,6 +24,7 @@ use Drupal\surface\Resolve;
 use Drupal\surface\Resource\Arrangement;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
+use Drupal\surface\Resource\Compute;
 use Drupal\surface\Resource\ComputesValueInterface;
 use Drupal\surface\Resource\DefinesInputsInterface;
 use PortableSchema\Builder\Schema;
@@ -98,6 +99,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   protected array $definitions = [];
 
   /**
+   * What each verb declared at a key of this blueprint, by key.
+   *
+   * @var array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
+   */
+  protected array $shells = [];
+
+  /**
    * What resolves a shape and its alters; NULL applies no alter.
    */
   protected ?Shapes $shapes = NULL;
@@ -159,8 +167,25 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    * Decision: see
    * docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader.
+   *
+   * @param string $key
+   *   The key.
+   * @param string $type
+   *   A row of the type table, a shape's class or a config schema type.
+   * @param string|\Stringable $label
+   *   The label.
+   * @param mixed $default
+   *   The default value; NULL declares none.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The definition declared.
+   *
+   * @internal
+   *   For the readers that still build definitions (SchemaReader,
+   *   PropertyDeclaration) and addEach()'s entries. No author writes it:
+   *   add() takes a schema.
    */
-  protected function addTyped(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
+  public function addTyped(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
     $verb = sprintf('add("%s", "%s")', $key, $type);
     if (str_contains($type, '\\')) {
       $definition = $this->fromShape($key, $type);
@@ -222,7 +247,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    */
   public function addEntry(string $key, string|DataDefinitionInterface $type, string|\Stringable $label, mixed $default = NULL): DataDefinitionInterface {
     if (is_string($type)) {
-      return $this->add($key, $type, $label, $default);
+      return $this->addTyped($key, $type, $label, $default);
     }
     $entry = clone $type;
     if ($entry instanceof DataDefinition) {
@@ -237,7 +262,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * The list is built here, so an author never reaches for core's
    * constructor, whose create() asks the typed data manager for the item.
    */
-  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition {
+  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): static {
     $shaped = NULL;
     if (is_string($item) && str_contains($item, '\\')) {
       if (is_subclass_of($item, DefinesInputsInterface::class)) {
@@ -258,7 +283,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       // it is: by the name of the key's items.
       $this->shaped[$key . '.*'] = $shaped;
     }
-    return $list;
+    return $this;
   }
 
   /**
@@ -270,9 +295,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * Decision: see docs/decisions.md#an-anonymous-map.
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): static {
     if ($description !== NULL) {
-      return static::stated($this->addMap($key, $label, $define), $description);
+      static::stated($this->addMap($key, $label, $define)->shellAt($key), $description);
+      return $this;
     }
     $map = MapDataDefinition::create();
     $map->setLabel($label);
@@ -280,7 +306,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       ->useShapes($this->shapes);
     $define($inner);
     $this->addKey($key, $map, $inner->defaults() === [] ? NULL : $inner->defaults());
-    return $map;
+    return $this;
   }
 
   /**
@@ -385,7 +411,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * Decision: see docs/decisions.md#a-blueprint-takes-no-complex-data-types.
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
     if (!LeafTypes::isLeaf($definition)) {
       throw new \LogicException(sprintf(
         'addDefinition("%s") was handed a %s: addDefinition() declares one value, of one of %s; %s',
@@ -395,7 +421,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
         LeafTypes::meant($definition instanceof ListDataDefinitionInterface ? 'list' : 'map'),
       ));
     }
-    return $this->addKey($key, $definition, $default);
+    $this->addKey($key, $definition, $default);
+    return $this;
   }
 
   /**
@@ -404,35 +431,111 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Read by the schema reader, which declares the key through this
    * blueprint's own verbs: what they refuse is refused the same way.
    */
-  public function add(string $key, Schema|string $schema, string|\Stringable|null $label = NULL, mixed $default = NULL): DataDefinition|static {
-    if (is_string($schema)) {
-      if ($label === NULL) {
-        throw new \InvalidArgumentException(sprintf('add("%s", "%s") is handed no label. A key is stated as a schema: add("%s", Schema::string()->title(...)).', $key, $schema, $key));
-      }
-      return $this->addTyped($key, $schema, $label, $default);
-    }
-    static::assertSchemaOnly($key, $label, $default);
+  public function add(string $key, Schema $schema): static {
     SchemaReader::authored($this, $key, $schema);
     return $this;
   }
 
   /**
-   * Refuses a label or a default handed to add() beside a schema.
+   * Gets what a verb declared at a key of this blueprint.
+   *
+   * Every verb returns the blueprint. The readers that still build a
+   * definition for a key go on from what the verb declared through this.
+   *
+   * @param string $key
+   *   The key, as the verb was handed it.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition the verb put at the key.
+   *
+   * @throws \LogicException
+   *   When no verb of this blueprint declared a definition at the key.
+   *
+   * @internal
+   *   For SchemaReader, ConfigSchemaReader, TypedDataReader and
+   *   PropertyDeclaration, until an entry holds only its schema.
+   */
+  public function shellAt(string $key): DataDefinitionInterface {
+    return $this->shells[$key] ?? throw new \LogicException(sprintf('No verb of this blueprint declared a definition at "%s".', $key));
+  }
+
+  /**
+   * Declares a map of keys from the site whose entry is a type or a definition.
+   *
+   * What addEach() declares once it has read its schema: each entry a row
+   * of the type table, a shape's class, or the definition of one value.
    *
    * @param string $key
    *   The key.
-   * @param string|\Stringable|null $label
-   *   The label handed, or NULL.
+   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $type
+   *   What every entry is.
+   * @param string $from
+   *   The provider's class.
+   * @param string|\Stringable $label
+   *   The map's label.
    * @param mixed $default
-   *   The default handed, or NULL.
+   *   What every entry starts from; NULL for nothing.
    *
-   * @throws \InvalidArgumentException
-   *   When either was handed: the schema says both.
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map at the key.
+   *
+   * @throws \LogicException
+   *   Where the blueprint holds no keys from the site.
+   *
+   * @internal
+   *   For addEach() and PropertyDeclaration, until an entry holds only its
+   *   schema.
    */
-  public static function assertSchemaOnly(string $key, string|\Stringable|null $label, mixed $default): void {
-    if ($label !== NULL || $default !== NULL) {
-      throw new \InvalidArgumentException(sprintf('add("%s") is handed a schema and a %s beside it. The schema says both: title() and default().', $key, $label !== NULL ? 'label' : 'default'));
+  abstract public function addEachTyped(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition;
+
+  /**
+   * Declares a computed key of the old spelling: a type and a label.
+   *
+   * @param string $key
+   *   The key.
+   * @param string $type
+   *   A row of the type table, a shape's class or a config schema type.
+   * @param string|\Stringable $label
+   *   The label.
+   * @param string[] $from
+   *   The keys it is computed from.
+   * @param string $using
+   *   The class that computes it.
+   * @param string $when
+   *   When it is computed.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The key's definition, marked computed.
+   *
+   * @throws \LogicException
+   *   Where the blueprint holds no computed key.
+   *
+   * @internal
+   *   For PropertyDeclaration, which reads #[Computed], until an entry
+   *   holds only its schema.
+   */
+  abstract public function computeTyped(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition;
+
+  /**
+   * Gets the blueprint a reader declares into as the module's adapter.
+   *
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $blueprint
+   *   The blueprint.
+   *
+   * @return self
+   *   The same blueprint.
+   *
+   * @throws \LogicException
+   *   For a blueprint the module did not make.
+   *
+   * @internal
+   *   For the readers shellAt() names.
+   */
+  public static function of(BlueprintAdditionsInterface $blueprint): self {
+    if (!$blueprint instanceof self) {
+      throw new \LogicException(sprintf('%s is no blueprint of the module: a reader declares into the blueprint the build hands it.', get_class($blueprint)));
     }
+    return $blueprint;
   }
 
   /**
@@ -469,6 +572,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     LeafTypes::assertHeld(sprintf('%s("%s")', $verb, $key), $definition);
     $this->assertNewKey($key);
     $this->declare($key, $definition, $default);
+    $this->shells[$key] = $definition;
     $this->keys[] = $key;
     $this->definitions[$key] = $definition;
     return $definition;
@@ -720,16 +824,18 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): static {
     if ($description !== NULL || $required || $storedAs !== NULL || $widget !== NULL) {
-      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS, $widget);
+      static::stated($this->attach($key, $structure, $label, $reads)->shellAt($key), $description, $required, $storedAs, References::STORED_AS, $widget);
+      return $this;
     }
     static::assertNoShape('attach', $key, $structure);
     static::assertReads($key, $reads);
     $shell = $this->reserveChild('attach', $key);
     $this->attachments[$key] = $structure;
     $this->wirings[$key] = $reads;
-    return static::labeled($shell, $label);
+    static::labeled($shell, $label);
+    return $this;
   }
 
   /**
@@ -779,9 +885,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): static {
     if ($description !== NULL || $required) {
-      return static::stated($this->attachList($key, $structure, $label, $min, $max), $description, $required);
+      static::stated($this->attachList($key, $structure, $label, $min, $max)->shellAt($key), $description, $required);
+      return $this;
     }
     static::assertNoShape('attachList', $key, $structure);
     if (($min !== NULL && $min < 0) || ($max !== NULL && $max < 0) || ($min !== NULL && $max !== NULL && $min > $max)) {
@@ -808,8 +915,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       $shell->addConstraint('Count', $count);
     }
     $this->declare($key, $shell, NULL);
+    $this->shells[$key] = $shell;
     $this->lists[$key] = $structure;
-    return static::labeled($shell, $label);
+    static::labeled($shell, $label);
+    return $this;
   }
 
   /**
@@ -1131,6 +1240,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     }
     $shell = MapDataDefinition::create();
     $this->declare($key, $shell, NULL);
+    $this->shells[$key] = $shell;
     return $shell;
   }
 

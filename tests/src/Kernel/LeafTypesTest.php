@@ -81,7 +81,7 @@ class LeafTypesTest extends SurfaceKernelTestBase {
     $builder = new SurfaceBuilder();
     $blueprint = $this->blueprint($builder);
     foreach (array_keys(LeafTypes::ROWS) as $type) {
-      $this->assertSame($type, $blueprint->add($type, $type, $type)->getDataType());
+      $this->assertSame($type, $blueprint->addTyped($type, $type, $type)->getDataType());
     }
     $schema = $this->container->get('surface.contract_emitter')->emitFull($builder->seal(), 'test')->document['schema'];
     foreach (LeafTypes::ROWS as $type => $row) {
@@ -101,13 +101,13 @@ class LeafTypesTest extends SurfaceKernelTestBase {
   public function testTypeNoRowIsForIsRefused(): void {
     $blueprint = $this->blueprint();
     $said = 'which JSON Schema has no type for. add() takes one of string, email, uri, datetime_iso8601, integer, timestamp, float, boolean';
-    $this->assertRefused(fn () => $blueprint->add('logo', 'binary', 'Logo'), 'add("logo", "binary") declares a key of the binary type, ' . $said, 'a typed data definition built by hand is addDefinition()');
-    $this->assertRefused(fn () => $blueprint->add('length', 'duration_iso8601', 'Length'), 'the duration_iso8601 type');
-    $this->assertRefused(fn () => $blueprint->add('language', 'language', 'Language'), 'the language type');
-    $this->assertRefused(fn () => $blueprint->add('settings', 'map', 'Settings'), 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.');
-    $this->assertRefused(fn () => $blueprint->add('tags', 'list', 'Tags'), 'a list is addList().');
-    $this->assertRefused(fn () => $blueprint->add('page', 'entity:node', 'Page'), "an id of an entity is add('<key>', 'integer' or 'string', ...), the type the entity type keeps its id as, with the SurfaceValidReference constraint naming the entity type");
-    $this->assertRefused(fn () => $blueprint->add('detail', 'any', 'Detail'), 'a value whose shape depends on another key is variants, attachVariants().');
+    $this->assertRefused(fn () => $blueprint->addTyped('logo', 'binary', 'Logo'), 'add("logo", "binary") declares a key of the binary type, ' . $said, 'a typed data definition built by hand is addDefinition()');
+    $this->assertRefused(fn () => $blueprint->addTyped('length', 'duration_iso8601', 'Length'), 'the duration_iso8601 type');
+    $this->assertRefused(fn () => $blueprint->addTyped('language', 'language', 'Language'), 'the language type');
+    $this->assertRefused(fn () => $blueprint->addTyped('settings', 'map', 'Settings'), 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.');
+    $this->assertRefused(fn () => $blueprint->addTyped('tags', 'list', 'Tags'), 'a list is addList().');
+    $this->assertRefused(fn () => $blueprint->addTyped('page', 'entity:node', 'Page'), "an id of an entity is add('<key>', 'integer' or 'string', ...), the type the entity type keeps its id as, with the SurfaceValidReference constraint naming the entity type");
+    $this->assertRefused(fn () => $blueprint->addTyped('detail', 'any', 'Detail'), 'a value whose shape depends on another key is variants, attachVariants().');
     $this->assertRefused(fn () => $blueprint->addList('logos', 'binary', 'Logos'), 'addList("logos", "binary") declares items of the binary type, which JSON Schema has no type for.');
   }
 
@@ -146,7 +146,7 @@ class LeafTypesTest extends SurfaceKernelTestBase {
   public function testConfigSchemaTypesResolveToRow(): void {
     $blueprint = $this->blueprint();
     foreach (['machine_name', 'label', 'path', 'color_hex', 'langcode', 'required_label', 'uri'] as $type) {
-      $definition = $blueprint->add($type, $type, $type);
+      $definition = $blueprint->addTyped($type, $type, $type);
       $this->assertTrue(LeafTypes::has($definition->getDataType()), $type . ' is ' . $definition->getDataType());
     }
   }

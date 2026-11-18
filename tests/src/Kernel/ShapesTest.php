@@ -456,7 +456,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $blueprint = static fn (): ShapeBlueprint => new ShapeBlueprint('resource_test.sku', $alter);
     $refused = [
       'mounting a key' => [
-        static fn () => $blueprint()->add('note', 'string', 'Note'),
+        static fn () => $blueprint()->add('note', Schema::string()->title('Note')),
         'calls add("note"). A shape is one value',
       ],
       'attaching' => [

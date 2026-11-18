@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Registry;
 use PortableSchema\Validator;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the widget hints are the dialect's `x-portable-ui`.
@@ -178,7 +179,7 @@ class UiKeywordTest extends SurfaceKernelTestBase {
   public function testTextOfMarkupAloneIsNotWritten(): void {
     $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'));
-    $owner->add('code', 'string', 'Code');
+    $owner->add('code', Schema::string()->title('Code'));
     $owner->describe('code', placeholder: '<span></span>', help: 'Four <em>letters</em>.');
     $schema = $this->container->get('surface.contract_emitter')->emitFull($builder->seal(), 'test.texts', widgets: TRUE)->document['schema'];
     $this->assertSame(['help' => 'Four letters.'], $schema['properties']['code']['x-portable-ui']['options']);
@@ -194,11 +195,11 @@ class UiKeywordTest extends SurfaceKernelTestBase {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
-    $owner->add('size', 'string', 'Size')
+    $owner->addTyped('size', 'string', 'Size')
       ->addConstraint('LabeledChoice', ['choices' => ['s' => 'Small', 'm' => 'Medium']]);
     $owner->describe('size', group: ArrangementGroup::fieldset('look', 'Look'));
     $alter = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
-    $alter->add('badge', 'string', 'Badge');
+    $alter->add('badge', Schema::string()->title('Badge'));
     $alter->describe('third_party_settings.first_module.badge', group: ArrangementGroup::details('extras', 'Extras', collapsed: TRUE, weight: 5, description: 'Rarely needed.'));
     return $builder->seal();
   }

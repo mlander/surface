@@ -372,8 +372,8 @@ final class References {
         $type === 'integer' ? 'an' : 'a',
         $type,
         $entry
-          ? sprintf('addEach(\'%s\', DataDefinition::create(\'%s\')->addConstraint(\'%s\', [...]), from: ..., label: ...), or #[Each(\'%s\', ...)]', $key, $type, self::CONSTRAINT, $type)
-          : sprintf('add(\'%s\', \'%s\', ...)', $key, $type),
+          ? sprintf('addEach(\'%s\', Schema::%s()->check(\'drupal:%s\', [...]), from: ..., label: ...), or #[Each(\'%s\', ...)]', $key, $type, self::CONSTRAINT, $type)
+          : sprintf('add(\'%s\', Schema::%s()->check(\'drupal:%s\', [...]))', $key, $type, self::CONSTRAINT),
       ));
     }
     if ($this->isContent($entity_type_id)) {

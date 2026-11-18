@@ -49,7 +49,8 @@ embeds, at any depth, so it is removed with any of them.
 block's id:
 
 ```php
-$inputs->add('component', 'string', t('Component'));
+$inputs->add('component', Schema::string()
+  ->title(t('Component')));
 $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 $inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);
 ```

@@ -197,11 +197,11 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
       [$key('integer', ['entityTypeId' => 'node', 'bundles' => ['']]), 'names no entity type'],
       [
         $key('string', ['entityTypeId' => 'node']),
-        "test declares \"x\" as a reference to node with the string type, and an id of node is an integer: declare it add('x', 'integer', ...).",
+        "test declares \"x\" as a reference to node with the string type, and an id of node is an integer: declare it add('x', Schema::integer()->check('drupal:SurfaceValidReference', [...])).",
       ],
       [
         $key('integer', ['entityTypeId' => 'user_role']),
-        "an id of user_role is a string: declare it add('x', 'string', ...).",
+        "an id of user_role is a string: declare it add('x', Schema::string()->check('drupal:SurfaceValidReference', [...])).",
       ],
       [$key('email', ['entityTypeId' => 'user']), 'with the email type'],
     ] as [$definition, $message]) {
@@ -230,7 +230,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     foreach (['entity:node', 'entity:node:article', 'entity'] as $type) {
       try {
-        $blueprint->add('x', $type, 'X');
+        $blueprint->addTyped('x', $type, 'X');
         $this->fail($type);
       }
       catch (\LogicException $e) {

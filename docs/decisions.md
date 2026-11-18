@@ -16667,3 +16667,41 @@ every check.
 `Traits\NeverStricterTrait`,
 `Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,
 `ResourceOperationTool::execute()`, [Testing a resource](testing-a-resource.md))
+
+## Slice 35, the remnants (2026-11-18)
+
+### Every verb returns the blueprint
+
+`addMap()`, `attach()`, `attachList()`, `attachVariants()`,
+`attachEach()`, `addEach()`, `addDefinition()`, `compute()` and
+`addList()` return the blueprint, as `add()` does (decision 1 of
+2026-11-14). A key is worded through its schema or the verb's named
+arguments (`description:`, `required:`, `storedAs:`), never through a
+definition a verb hands back. `add()` takes a `Schema` alone, `compute()`
+takes a `Schema` alone and no label, and `addEach()` takes a `Schema`
+alone.
+
+- **The readers keep their definitions until an entry holds only its
+  schema.** `SchemaReader`, `ConfigSchemaReader`, `TypedDataReader` and
+  `PropertyDeclaration` still build definitions. They reach what a verb
+  declared through `BlueprintAdapterBase::shellAt()`, and the old typed
+  spelling through `addTyped()`, `addEachTyped()` and `computeTyped()`,
+  all `@internal`. Slice 35's later parts remove them with the
+  definitions.
+- **`addList()` stays, for a list of plain maps.** At an input a list of
+  objects is a collection of children (decided 2026-11-17), so a list
+  whose item is a plain map with no child has no schema spelling. The
+  value baseline pins one, `values_test.keys` `/slots`: written as a
+  schema it moved 17 cases. `addList()` now documents that one use; the
+  blueprint keeps 17 methods.
+- **An author's plain map may say its default.** `Schema::object([...])
+  ->default([])` is read as a map that starts empty, as
+  `AddressFieldSettingsResource`'s overrides do. Only an author's
+  schema is read so; a served document is read as before.
+- **An author's list may hold secret items.** `Schema::list(
+  Schema::string()->writeOnly(TRUE))` marks each item secret, as a
+  definition's item marked secret did.
+- **The generator writes schemas.** `drush generate surface:resource`
+  writes `add($key, Schema::...)` for a value, a list and a map; a map
+  whose key is digits alone, which an object schema cannot name, is
+  still `addMap()`.

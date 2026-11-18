@@ -18,7 +18,8 @@ and update are not two resources: they are how much is known.
 The machine name is Drupal's title and machine name pair, one spelling:
 
 ```php
-$inputs->compute('type', 'machine_name', t('Machine name'),
+$inputs->compute('type', Schema::of('drupal:config/machine_name')
+  ->title(t('Machine name')),
   from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT)
 ```
 

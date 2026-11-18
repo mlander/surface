@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface\Resource;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\MapDataDefinition;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -73,18 +70,14 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   What the provider lists for (BoundSiteListInterface::listFor()), or
    *   none for its list(). The shape is the provider's.
    * @param string|\Stringable|null $description
-   *   The key's description, as setDescription() on the definition
-   *   returned would write it; NULL for none.
+   *   The key's description; NULL for none.
    * @param bool $required
-   *   TRUE to require the key, as setRequired(TRUE) on the definition
-   *   returned would.
+   *   TRUE to require the key.
    * @param string|null $storedAs
    *   How the variants are stored, the value of Variants::STORED_AS
    *   (Variants::FLAT); NULL to say nothing.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to describe with the core
-   *   setters, as attach() returns it.
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is already declared, for outputs, which do not attach
@@ -94,7 +87,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#variants-from-the-site
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition;
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): static;
 
   /**
    * A map with one value per thing the site has: keys from the site.
@@ -105,12 +98,10 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * one: of $type, labeled with the entry's label, starting from the
    * entry's default or else the schema's `default`, held to what is
    * stored when the entry is locked; an entry that names a schema or a
-   * structure is refused, since a key per thing reads neither. $type is
-   * its schema, or a type or a definition, as addList() takes its item
-   * (the old spelling): an entry with constraints of
-   * its own is a definition, and an entry that refers to an entity is the
-   * id's type with the SurfaceValidReference constraint, as any reference
-   * key is, its type checked against the entity type's id at the build
+   * structure is refused, since a key per thing reads neither. An entry
+   * that refers to an entity is the id's schema with the
+   * SurfaceValidReference check, as any reference key is, its type
+   * checked against the entity type's id at the build
    * (References::settle()). The provider is asked
    * when the resource is built,
    * never by the resource; what it read is the built resource's
@@ -128,34 +119,26 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @param string $key
    *   The key the map sits at.
-   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface|\PortableSchema\Builder\Schema $type
+   * @param \PortableSchema\Builder\Schema $type
    *   What each entry is: its schema, one value, its default inside it,
-   *   or a shape the schema refers to, Schema::of(Shape::class); or,
-   *   until the old spelling's callers are converted, one of the types
-   *   add() takes, the class of a shape, or the entry's definition, one
-   *   value, copied for every entry.
+   *   or a shape the schema refers to, Schema::of(Shape::class).
    * @param string $from
    *   The provider's class, implementing SiteListInterface.
    * @param string|\Stringable $label
    *   The map's label: the values have no structure to borrow one from.
    * @param string|\Stringable|null $description
-   *   The key's description, as setDescription() on the definition
-   *   returned would write it; NULL for none.
+   *   The key's description; NULL for none.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to describe.
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is taken, for outputs, inside a structure mixed in,
-   *   when the provider implements no SiteListInterface, for a definition
-   *   that is a map or a list or whose type is no type of the table
-   *   (LeafTypes), for a class that is no shape's, a resource's or a
-   *   structure's among them, and for an
-   *   entity type string, `entity:<type>`, which is no type of the table.
+   *   when the provider implements no SiteListInterface, and for a schema
+   *   that is no value and no list of values.
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition;
+  public function addEach(string $key, Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): static;
 
   /**
    * A map with one child per thing the site has: keys from the site.
@@ -186,18 +169,16 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   Each port of the structure, mapped to a sibling map from the same
    *   provider, whose entry of the same id it reads.
    * @param string|\Stringable|null $description
-   *   The key's description, as setDescription() on the definition
-   *   returned would write it; NULL for none.
+   *   The key's description; NULL for none.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to describe.
+   * @return $this
    *
    * @throws \LogicException
    *   As addEach() does, and for a shape.
    *
    * @see docs/resources.md#ports-on-an-entry
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition;
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): static;
 
   /**
    * Mixes a structure in: its members become this blueprint's own keys.
@@ -298,9 +279,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
   /**
    * A computed key: a value of the resource no caller types.
    *
-   * Declared as add() declares a key, of a type or a shape, labeled, and
-   * returned for the owner to constrain and describe; its value is what
-   * $using computes from the values of the keys $from names. The pipeline
+   * Declared as add() declares a key, from its schema, whose title is its
+   * label; its value is what $using computes from the values of the keys
+   * $from names. The pipeline
    * computes it after accepting the rest, then validates it by its own
    * constraints and rules, and storage writes it as any key; the read
    * answers it. It is never asked of a caller: both documents state it
@@ -324,13 +305,10 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @param string $key
    *   The key.
-   * @param string|\PortableSchema\Builder\Schema $type
-   *   The key's schema, its title the label; or, until the old spelling's
-   *   callers are converted, a typed data type of one value, a config
-   *   schema data type of one value (`machine_name`), or a shape's class.
-   * @param string|\Stringable|null $label
-   *   The label of a key whose type is given as a string; NULL with a
-   *   schema.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema, one value, its title the label: a config schema
+   *   type of one value (`drupal:config/machine_name`) or a shape
+   *   (Schema::of(Shape::class)) included.
    * @param string[] $from
    *   The keys it is computed from: keys this blueprint declared before
    *   it, at least one.
@@ -344,9 +322,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   it as ON_CREATE does when a call leaves it out, and keep a value
    *   sent. A write that changes none keeps what is stored, either way.
    *
-   * @return \Drupal\Core\TypedData\DataDefinition|$this
-   *   The key's definition, for a type given as a string; the blueprint,
-   *   for a schema.
+   * @return $this
    *
    * @throws \LogicException
    *   For outputs, a structure (a computed key is a resource's own, in
@@ -356,7 +332,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/declaring-a-resource.md#computed-keys
    */
-  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static;
+  public function compute(string $key, Schema $schema, array $from = [], string $using = '', string $when = Compute::ON_CREATE): static;
 
   /**
    * Says what the declared keys depend on, while the build is reused.

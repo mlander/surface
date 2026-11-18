@@ -289,9 +289,9 @@ own, as the field's storage is.
   child, its Count the parent's
   ([Resources and structures](resources.md#collections)).
 
-Each takes the key's label with the key, and returns the map definition
-at the key, as `add()` returns its definition, so the owner describes
-its own child's key with the core setters.
+Each takes the key's label with the key, and its description and
+whether it is required as the named arguments `description:` and
+`required:`, and returns the blueprint, as every verb does.
 
 A child is invoked the way a resource asked on its own is: through one
 of its own operations, the one its parent's context names, else the one

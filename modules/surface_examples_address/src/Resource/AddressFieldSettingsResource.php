@@ -6,8 +6,6 @@ namespace Drupal\surface_examples_address\Resource;
 
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -68,19 +66,12 @@ final class AddressFieldSettingsResource implements ResourceInterface {
       ->description(t('Ensures entered addresses are always formatted in the same language.'))
       ->check('drupal:LanguageExists'));
 
-    $overrides = $inputs->addMap(
-      'field_overrides',
-      t('Field overrides'),
-      static function (BlueprintInterface $overrides): void {
-        foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
-          $overrides->addDefinition($field_name, $definition);
-        }
-      },
-      description: t('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'),
-    );
     // No override is an empty map, as the address module's own default
     // settings say; no key inside starts from a value of its own.
-    DefinitionMetadata::setDefaultValue($overrides, []);
+    $inputs->add('field_overrides', Schema::object(self::fieldOverrideSchemas())
+      ->title(t('Field overrides'))
+      ->description(t('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'))
+      ->default([]));
   }
 
   /**
@@ -93,11 +84,11 @@ final class AddressFieldSettingsResource implements ResourceInterface {
    * the declaration stays literal; AddressFieldResourceTest asserts the
    * two agree word for word.
    *
-   * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
-   *   One optional override definition per overridable address field, in
-   *   the order the address module names them.
+   * @return array<string, \PortableSchema\Builder\Schema>
+   *   One optional override per overridable address field, in the order
+   *   the address module names them.
    */
-  protected static function fieldOverrideDefinitions(): array {
+  protected static function fieldOverrideSchemas(): array {
     $labels = [
       AddressField::GIVEN_NAME => t('First name', [], ['context' => 'Address label']),
       AddressField::ADDITIONAL_NAME => t('Middle name', [], ['context' => 'Address label']),
@@ -115,23 +106,19 @@ final class AddressFieldSettingsResource implements ResourceInterface {
       AddressField::LOCALITY => t('Locality (e.g. City)', [], ['context' => 'Address label']),
       AddressField::ADMINISTRATIVE_AREA => t('Administrative area (e.g. State or Province)', [], ['context' => 'Address label']),
     ];
-    $definitions = [];
+    $schemas = [];
     foreach ($labels as $field_name => $label) {
-      $definitions[$field_name] = new DataDefinition([
-        'type' => 'string',
-        'label' => $label,
-        'constraints' => [
-          'LabeledChoice' => [
-            'choices' => [
-              FieldOverride::HIDDEN => t('Hidden'),
-              FieldOverride::OPTIONAL => t('Optional'),
-              FieldOverride::REQUIRED => t('Required'),
-            ],
+      $schemas[$field_name] = Schema::string()
+        ->title($label)
+        ->check('drupal:LabeledChoice', [
+          'choices' => [
+            FieldOverride::HIDDEN => t('Hidden'),
+            FieldOverride::OPTIONAL => t('Optional'),
+            FieldOverride::REQUIRED => t('Required'),
           ],
-        ],
-      ]);
+        ]);
     }
-    return $definitions;
+    return $schemas;
   }
 
 }

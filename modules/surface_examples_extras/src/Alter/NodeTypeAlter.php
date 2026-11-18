@@ -6,11 +6,9 @@ namespace Drupal\surface_examples_extras\Alter;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\AltersStorageLayoutInterface;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
-use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use Drupal\surface_examples_extras\NodeTypeReviewSettings;
@@ -79,25 +77,23 @@ final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutI
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $unit = DataDefinition::create('string')
-      ->setLabel($this->t('Unit'))
-      ->addConstraint('LabeledChoice', [
-        'choices' => NodeTypeReviewSettings::units(),
-        'labels' => [
-          'hours' => $this->t('Hours'),
-          'days' => $this->t('Days'),
-          'weeks' => $this->t('Weeks'),
-          NodeTypeReviewSettings::BUSINESS_DAYS => $this->t('Business days'),
-        ],
-      ]);
-    $inputs->addMap(NodeTypeReviewSettings::DEADLINE, $this->t('Review deadline'), function (BlueprintInterface $deadline) use ($unit): void {
-      $deadline->add(NodeTypeReviewSettings::AMOUNT, Schema::integer()
+    $inputs->add(NodeTypeReviewSettings::DEADLINE, Schema::object([
+      NodeTypeReviewSettings::AMOUNT => Schema::integer()
         ->title($this->t('Amount'))
-        ->minimum(1));
-      $deadline->addDefinition(NodeTypeReviewSettings::UNIT, $unit, default: NodeTypeReviewSettings::DEFAULT_UNIT);
-    })
-      ->setDescription($this->t('How long an editor has to review new content of this type, from one hour to thirty days. Leave the amount empty for no deadline.'))
-      ->addConstraint('SurfaceExamplesExtrasReviewDeadline', []);
+        ->minimum(1),
+      NodeTypeReviewSettings::UNIT => Schema::options([
+        'hours' => $this->t('Hours'),
+        'days' => $this->t('Days'),
+        'weeks' => $this->t('Weeks'),
+        NodeTypeReviewSettings::BUSINESS_DAYS => $this->t('Business days'),
+      ])
+        ->type('string')
+        ->title($this->t('Unit'))
+        ->default(NodeTypeReviewSettings::DEFAULT_UNIT),
+    ])
+      ->title($this->t('Review deadline'))
+      ->description($this->t('How long an editor has to review new content of this type, from one hour to thirty days. Leave the amount empty for no deadline.'))
+      ->check('drupal:SurfaceExamplesExtrasReviewDeadline'));
     $inputs->add(NodeTypeReviewSettings::TAGS, Schema::list(Schema::string()
       ->title($this->t('Audience tag'))
       ->check('drupal:Regex', [

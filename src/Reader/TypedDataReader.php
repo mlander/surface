@@ -19,6 +19,7 @@ use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\ResourceBuild\BlueprintAdapterBase;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 
@@ -213,26 +214,26 @@ final class TypedDataReader implements DeclarationReaderInterface {
             $declared = $this->open($inputs, $key, $property);
           }
           else {
-            $declared = $inputs->attachList($key, $this->structure($item->getDataType()), $label);
+            $declared = BlueprintAdapterBase::of($inputs->attachList($key, $this->structure($item->getDataType()), $label))->shellAt($key);
             $reading->structure($here . '.*', self::PREFIX . $item->getDataType());
           }
         }
         else {
           // Noted by value() where it reads no type.
           $value = $this->value($item, $laid[$key] ?? [], $reading, $here . '.*', NULL);
-          $declared = $value === NULL ? $this->open($inputs, $key, $property) : $inputs->addList($key, $value, $label ?? $property->getLabel() ?? $key);
+          $declared = $value === NULL ? $this->open($inputs, $key, $property) : BlueprintAdapterBase::of($inputs->addList($key, $value, $label ?? $property->getLabel() ?? $key))->shellAt($key);
         }
       }
       elseif ($property instanceof ComplexDataDefinitionInterface && !$property instanceof DataReferenceDefinitionInterface) {
         if ($this->isNamed($property)) {
-          $declared = $inputs->attach($key, $this->structure($property->getDataType()), $label);
+          $declared = BlueprintAdapterBase::of($inputs->attach($key, $this->structure($property->getDataType()), $label))->shellAt($key);
           $reading->structure($here, self::PREFIX . $property->getDataType());
         }
         else {
           $inner = new Reading();
-          $declared = $inputs->addMap($key, $label ?? $property->getLabel() ?? $key, function (BlueprintInterface $map) use ($property, $inner): void {
+          $declared = BlueprintAdapterBase::of($inputs->addMap($key, $label ?? $property->getLabel() ?? $key, function (BlueprintInterface $map) use ($property, $inner): void {
             $this->properties($map, $property, NULL, [], $inner);
-          });
+          }))->shellAt($key);
           $reading->nest($here, $inner);
         }
       }
@@ -251,6 +252,7 @@ final class TypedDataReader implements DeclarationReaderInterface {
       }
       $this->word($declared, $property);
       if ($required) {
+        assert($declared instanceof DataDefinition);
         $declared->setRequired(TRUE);
       }
       if ($property->isReadOnly()) {

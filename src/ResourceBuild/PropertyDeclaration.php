@@ -635,23 +635,24 @@ final class PropertyDeclaration {
       $blueprint->reads($key, $port->required ? $read->required() : $read);
       return NULL;
     }
+    $adapter = BlueprintAdapterBase::of($blueprint);
     if ($computed = self::attribute($property, Computed::class)) {
-      $definition = $blueprint->compute($key, $computed->type ?? self::type($property), self::label($computed->label), $computed->from, $computed->using, $computed->when);
+      $definition = $adapter->computeTyped($key, $computed->type ?? self::type($property), self::label($computed->label), $computed->from, $computed->using, $computed->when);
       self::word($definition, $computed->description);
       return $definition;
     }
     if ($attach = self::attribute($property, Attach::class)) {
-      $definition = $blueprint->attach($key, $attach->structure ?? self::classType($property, 'Attach', 'structure'), self::text($attach->label), $attach->reads);
+      $definition = $adapter->attach($key, $attach->structure ?? self::classType($property, 'Attach', 'structure'), self::text($attach->label), $attach->reads)->shellAt($key);
       self::word($definition, $attach->description);
       return $definition;
     }
     if ($list = self::attribute($property, AttachList::class)) {
-      $definition = $blueprint->attachList($key, $list->structure, self::text($list->label), $list->min, $list->max);
+      $definition = $adapter->attachList($key, $list->structure, self::text($list->label), $list->min, $list->max)->shellAt($key);
       self::word($definition, $list->description);
       return $definition;
     }
     if ($variants = self::attribute($property, AttachVariants::class)) {
-      $definition = $blueprint->attachVariants($key, by: $variants->by, label: self::text($variants->label), from: $variants->from, arguments: $variants->arguments);
+      $definition = BlueprintAdapterBase::of($blueprint->attachVariants($key, by: $variants->by, label: self::text($variants->label), from: $variants->from, arguments: $variants->arguments))->shellAt($key);
       self::word($definition, $variants->description);
       return $definition;
     }
@@ -662,25 +663,24 @@ final class PropertyDeclaration {
       if ($each->default !== NULL && self::constrainsItem($property)) {
         throw new \LogicException(sprintf('%s::$%s carries #[Each] with a default and #[Schema] or #[Check] rules on its entry: state the default in the entry\'s #[Schema(additionalProperties:)] instead.', $property->getDeclaringClass()->getName(), $key));
       }
-      $entry = match (TRUE) {
-        self::constrainsItem($property) => DataDefinition::create($each->type),
-        $each->default !== NULL => LeafTypes::schemaOf($each->type, sprintf('#[Each] on %s::$%s', $property->getDeclaringClass()->getName(), $key))->default($each->default),
-        default => $each->type,
+      $definition = match (TRUE) {
+        self::constrainsItem($property) => $adapter->addEachTyped($key, DataDefinition::create($each->type), $each->from, self::label($each->label)),
+        $each->default !== NULL => BlueprintAdapterBase::of($blueprint->addEach($key, LeafTypes::schemaOf($each->type, sprintf('#[Each] on %s::$%s', $property->getDeclaringClass()->getName(), $key))->default($each->default), $each->from, self::label($each->label)))->shellAt($key),
+        default => $adapter->addEachTyped($key, $each->type, $each->from, self::label($each->label)),
       };
-      $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label));
       self::word($definition, $each->description);
       return $definition;
     }
     if ($each = self::attribute($property, AttachEach::class)) {
-      $definition = $blueprint->attachEach($key, $each->structure, $each->from, self::text($each->label), $each->reads);
+      $definition = BlueprintAdapterBase::of($blueprint->attachEach($key, $each->structure, $each->from, self::text($each->label), $each->reads))->shellAt($key);
       self::word($definition, $each->description);
       return $definition;
     }
     if ($map = self::attribute($property, Map::class)) {
       $of = $map->of ?? self::classType($property, 'Map', 'of');
-      $definition = $blueprint->addMap($key, self::label($map->label), static function (BlueprintInterface $inner) use ($of): void {
+      $definition = $adapter->addMap($key, self::label($map->label), static function (BlueprintInterface $inner) use ($of): void {
         self::inputs($of, $inner);
-      });
+      })->shellAt($key);
       self::word($definition, $map->description);
       return $definition;
     }
@@ -690,13 +690,14 @@ final class PropertyDeclaration {
       $item = class_exists($attribute->list) && !is_subclass_of($attribute->list, ShapeInterface::class)
         ? self::itemMap($attribute->list)
         : $attribute->list;
-      $definition = $blueprint->addList($key, $item, self::label($attribute->label), $default);
+      $definition = $adapter->addList($key, $item, self::label($attribute->label), $default)->shellAt($key);
     }
     else {
-      $definition = $blueprint->add($key, $attribute->type ?? self::type($property), self::label($attribute->label), $default);
+      $definition = $adapter->addTyped($key, $attribute->type ?? self::type($property), self::label($attribute->label), $default);
     }
     self::word($definition, $attribute->description);
     if ($attribute->required ?? self::required($property)) {
+      assert($definition instanceof DataDefinition);
       $definition->setRequired(TRUE);
     }
     return $definition;

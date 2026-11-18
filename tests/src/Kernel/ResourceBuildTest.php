@@ -130,7 +130,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
   public function testAnyKeyIsRefused(): void {
     $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     try {
-      $blueprint->add('detail', 'any', 'Detail');
+      $blueprint->addTyped('detail', 'any', 'Detail');
       $this->fail('An any key is refused.');
     }
     catch (\LogicException $e) {
@@ -395,10 +395,10 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     catch (\LogicException $e) {
       $this->assertStringContainsString('a collection under the mount is not built', $e->getMessage());
     }
-    $mount = $additions->attach('third_party_settings.surface_resource_test', RecipeResource::class);
+    $mount = $additions->attach('third_party_settings.surface_resource_test', RecipeResource::class)->shellAt('third_party_settings.surface_resource_test');
     $this->assertSame($mount, $builder->getThirdPartyMount('surface_resource_test'), 'The mount is held, for the alter to describe and place.');
     try {
-      $additions->add('note', 'string', 'Note');
+      $additions->add('note', Schema::string()->title('Note'));
       $this->fail('An alter added a key beside the structure at its mount.');
     }
     catch (\LogicException $e) {
@@ -414,10 +414,10 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    */
   public function testAddingIsNeverReplacing(): void {
     $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
-    $blueprint->add('name', 'string', 'Name');
+    $blueprint->add('name', Schema::string()->title('Name'));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The input "name" was already added to this blueprint.');
-    $blueprint->add('name', 'string', 'Other name');
+    $blueprint->add('name', Schema::string()->title('Other name'));
   }
 
   /**
