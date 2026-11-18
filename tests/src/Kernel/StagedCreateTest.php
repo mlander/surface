@@ -288,32 +288,6 @@ class StagedCreateTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests apply creates each in position order and answers each new id.
-   */
-  public function testApplyCreatesEachInOrder(): void {
-    $id = $this->open();
-    $this->stageCreate($id);
-    $this->stageCreate($id, ['title' => ['value' => 'Winter meetup'], 'field_description' => ['value' => 'Indoors.']]);
-    $applied = $this->stageTool('apply', $id);
-    $this->assertTrue($applied['success'], $applied['message']);
-    $this->assertSame([1, 2], array_column($applied['outputs']['applied'], 'position'));
-    $this->assertSame(['create', 'create'], array_column($applied['outputs']['applied'], 'kind'));
-    $this->assertSame([[['name' => 'id', 'value' => '-1']], [['name' => 'id', 'value' => '-2']]], array_column($applied['outputs']['applied'], 'parameters'));
-    $ids = array_column($applied['outputs']['applied'], 'id');
-    $this->assertCount(2, $ids);
-    $this->assertContainsOnlyString($ids, 'Each id as text.');
-    $this->assertLessThan((int) $ids[1], (int) $ids[0], 'In position order.');
-    $first = Node::load($ids[0]);
-    $second = Node::load($ids[1]);
-    $this->assertInstanceOf(NodeInterface::class, $first);
-    $this->assertInstanceOf(NodeInterface::class, $second);
-    $this->assertSame(['Autumn meetup', 'In the hall.'], [$first->label(), $first->get('field_description')->value]);
-    $this->assertSame(['Winter meetup', 'Indoors.'], [$second->label(), $second->get('field_description')->value]);
-    $this->assertSame((int) $this->owner->id(), (int) $first->getOwnerId(), 'Written as the owner.');
-    $this->assertSame('applied', $this->stages()->read($id)['status']);
-  }
-
-  /**
    * Tests a dry run of apply creates nothing and answers no id.
    */
   public function testApplyDryRunCreatesNothing(): void {
@@ -355,8 +329,10 @@ class StagedCreateTest extends SurfaceKernelTestBase {
     }
     $this->assertNull(Node::load($assigned), 'Not in the entity cache.');
     $this->assertSame(1, $this->nodes(), 'Not in the database.');
+    $this->assertInstanceOf(NodeInterface::class, Node::load($existing->id()), 'The node stored before loads in the same request.');
     $this->assertSame('Alpha', $this->row('a')['title']);
     $this->assertSame('open', $this->stages()->read($id)['status']);
+    $this->assertCount(2, $this->stages()->read($id)['writes'], 'The stage keeps both writes.');
   }
 
   /**

@@ -14,7 +14,6 @@ use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\Staging\StagedStorage;
 use Drupal\surface\Tool\OperationInputs;
-use Drupal\surface_stage_test\Storage\LedgerStorage;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\FailureCategory;
@@ -483,24 +482,8 @@ class StagedLocalIdTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(NodeInterface::class, $second);
     $this->assertSame(['Autumn meetup', 'Moved outdoors.'], [$first->label(), $first->get('field_description')->value]);
     $this->assertSame(['Winter social', 'In the hall.'], [$second->label(), $second->get('field_description')->value]);
-  }
-
-  /**
-   * Tests a rolled back apply leaves no node and the stage open.
-   */
-  public function testRolledBackApplyLeavesNoNode(): void {
-    $this->ledger('a', 'Alpha');
-    $id = $this->open();
-    $this->page('create', $id, [OperationInputs::VALUES => self::VALUES]);
-    $this->page('update', $id, ['id' => -1, OperationInputs::VALUES => ['title' => ['value' => 'Spring meetup']]]);
-    $this->assertTrue($this->stage($id, 'stage_test.ledger', ['id' => 'a'], ['title' => 'Alpha moved'])->committed);
-    $this->container->get('state')->set(LedgerStorage::FAIL, 'a');
-    $applied = $this->stageTool('apply', $id);
-    $this->assertFalse($applied['success']);
-    $this->assertSame(FailureCategory::Runtime, $applied['category']);
-    $this->assertSame(0, $this->nodes());
-    $this->assertSame('open', $this->stages()->read($id)['status']);
-    $this->assertCount(2, $this->stages()->read($id)['writes']);
+    $this->assertSame((int) $this->owner->id(), (int) $first->getOwnerId(), 'Written as the owner.');
+    $this->assertSame('applied', $this->stages()->read($id)['status']);
   }
 
   /**

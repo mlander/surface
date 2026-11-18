@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\SurfaceBuilder;
-use PHPUnit\Framework\Attributes\DataProvider;
+use Drupal\Tests\surface\Traits\RowsInOneKernelTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -31,6 +31,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ConstraintTableTest extends SurfaceKernelTestBase {
+
+  use RowsInOneKernelTrait;
 
   /**
    * {@inheritdoc}
@@ -64,17 +66,20 @@ class ConstraintTableTest extends SurfaceKernelTestBase {
 
   /**
    * Tests the server and the keywords agree on every value.
+   *
+   * The rows in one kernel: each builds its own definitions.
    */
-  #[DataProvider('cases')]
-  public function testKeywordsAgreeWithTheConstraint(string $id, array $options, string $type, array $values, array $keywords): void {
-    $written = ConstraintKeywords::state([$id => $options], [$type === 'list' ? 'array' : 'string']);
-    $this->assertSame($keywords, $written['keywords']);
-    $this->assertSame([], $written['left']);
-    foreach ($values as $value) {
-      $server = $this->accepts($this->definition($type)->addConstraint($id, $options), $value);
-      $contract = $this->accepts($this->definition($type)->addConstraint('JsonSchema', ['schema' => $written['keywords']]), $value);
-      $this->assertSame($server, $contract, sprintf('%s %s: the keywords %s %s as the server does.', $id, json_encode($options), $server ? 'accept' : 'refuse', json_encode($value)));
-    }
+  public function testKeywordsAgreeWithTheConstraint(): void {
+    $this->checkRows(static::cases(), function (string $name, string $id, array $options, string $type, array $values, array $keywords): void {
+      $written = ConstraintKeywords::state([$id => $options], [$type === 'list' ? 'array' : 'string']);
+      $this->assertSame($keywords, $written['keywords'], $name);
+      $this->assertSame([], $written['left'], $name);
+      foreach ($values as $value) {
+        $server = $this->accepts($this->definition($type)->addConstraint($id, $options), $value);
+        $contract = $this->accepts($this->definition($type)->addConstraint('JsonSchema', ['schema' => $written['keywords']]), $value);
+        $this->assertSame($server, $contract, sprintf('%s: %s %s: the keywords %s %s as the server does.', $name, $id, json_encode($options), $server ? 'accept' : 'refuse', json_encode($value)));
+      }
+    });
   }
 
   /**
@@ -108,16 +113,19 @@ class ConstraintTableTest extends SurfaceKernelTestBase {
 
   /**
    * Tests the emitter names a row on a type it does not apply to.
+   *
+   * The rows in one kernel: each emits a data surface of its own.
    */
-  #[DataProvider('notApplying')]
-  public function testRowNotApplyingIsCheckedOnServer(string $type, string $id, array $options): void {
-    $definition = ($type === 'list' ? ListDataDefinition::create('string') : DataDefinition::create($type))->setLabel('Key')->addConstraint($id, $options);
-    $emitted = $this->emitted(['key' => $definition])['key'];
-    $this->assertSame([$id], array_column(PortableKeywords::checks($emitted), 'constraint'), $id . ' is named under portable-check.');
-    $written = ConstraintKeywords::row($id)->write($id, $options, ['string', 'integer', 'number', 'array', 'boolean']);
-    foreach (array_keys($written->keywords ?? []) as $keyword) {
-      $this->assertArrayNotHasKey($keyword, $emitted, $id . ' writes no ' . $keyword . '.');
-    }
+  public function testRowNotApplyingIsCheckedOnServer(): void {
+    $this->checkRows(static::notApplying(), function (string $name, string $type, string $id, array $options): void {
+      $definition = ($type === 'list' ? ListDataDefinition::create('string') : DataDefinition::create($type))->setLabel('Key')->addConstraint($id, $options);
+      $emitted = $this->emitted(['key' => $definition])['key'];
+      $this->assertSame([$id], array_column(PortableKeywords::checks($emitted), 'constraint'), $id . ' is named under portable-check.');
+      $written = ConstraintKeywords::row($id)->write($id, $options, ['string', 'integer', 'number', 'array', 'boolean']);
+      foreach (array_keys($written->keywords ?? []) as $keyword) {
+        $this->assertArrayNotHasKey($keyword, $emitted, $id . ' writes no ' . $keyword . '.');
+      }
+    });
   }
 
   /**

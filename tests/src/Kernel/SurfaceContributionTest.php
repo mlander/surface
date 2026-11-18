@@ -17,8 +17,8 @@ use Drupal\surface_test\AnyToIntegerRefiner;
 use Drupal\surface_test\CacheableCasingRefiner;
 use Drupal\surface_test\ConstraintRewritingRefiner;
 use Drupal\surface_test\MapPropertyRefiner;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\Traits\RowsInOneKernelTrait;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
@@ -35,6 +35,8 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class SurfaceContributionTest extends SurfaceKernelTestBase {
+
+  use RowsInOneKernelTrait;
 
   /**
    * {@inheritdoc}
@@ -187,38 +189,36 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
    * (decision 14), which the rows below say and testTheStricterStands()
    * reads.
    *
-   * @param array $advertised
-   *   The constraints the key is advertised with.
-   * @param bool $required
-   *   Whether the key is advertised as required.
-   * @param \Drupal\surface_test\ConstraintRewritingRefiner $refiner
-   *   The refiner to run.
-   * @param string|null $refused
-   *   The message fragment the refusal must carry, or NULL when the
-   *   refinement is narrower and must be accepted.
+   * The rows in one kernel: each seals a data surface of its own, with a
+   * refiner the provider made for it.
    */
-  #[DataProvider('narrowingCases')]
-  public function testTheNarrowingCheck(array $advertised, bool $required, ConstraintRewritingRefiner $refiner, ?string $refused): void {
-    $definition = DataDefinition::create('string')->setLabel('Variant')->setRequired($required);
-    foreach ($advertised as $name => $options) {
-      $definition->addConstraint($name, $options);
-    }
-    $builder = new SurfaceBuilder(
-      definitions: [
-        'casing' => DataDefinition::create('string'),
-        'variant' => $definition,
-      ],
-      refinements: ['variant' => ['casing']],
-    );
-    $surface = $builder->addRefiner('variant', $refiner)->seal();
+  public function testTheNarrowingCheck(): void {
+    $this->checkRows(static::narrowingCases(), function (string $case, array $advertised, bool $required, ConstraintRewritingRefiner $refiner, ?string $refused): void {
+      $definition = DataDefinition::create('string')->setLabel('Variant')->setRequired($required);
+      foreach ($advertised as $name => $options) {
+        $definition->addConstraint($name, $options);
+      }
+      $builder = new SurfaceBuilder(
+        definitions: [
+          'casing' => DataDefinition::create('string'),
+          'variant' => $definition,
+        ],
+        refinements: ['variant' => ['casing']],
+      );
+      $surface = $builder->addRefiner('variant', $refiner)->seal();
 
-    if ($refused === NULL) {
-      $this->assertNotSame($surface, $surface->refine(['casing' => 'uppercase']));
-      return;
-    }
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage($refused);
-    $surface->refine(['casing' => 'uppercase']);
+      if ($refused === NULL) {
+        $this->assertNotSame($surface, $surface->refine(['casing' => 'uppercase']), $case);
+        return;
+      }
+      try {
+        $surface->refine(['casing' => 'uppercase']);
+        $this->fail($case . ': the refinement is refused.');
+      }
+      catch (\LogicException $e) {
+        $this->assertStringContainsString($refused, $e->getMessage(), $case);
+      }
+    });
   }
 
   /**
