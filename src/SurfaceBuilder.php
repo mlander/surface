@@ -15,8 +15,8 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\ValueSchema;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use PortableSchema\Builder\Schema;
@@ -1043,7 +1043,7 @@ final class SurfaceBuilder {
         static fn (mixed $value): bool => in_array((string) $value, $ids, TRUE),
       )))->applyTo($deciding);
     }
-    Narrowing::assertNarrows($by, $narrowing, $before, $deciding);
+    Answer::assertNarrows($by, $narrowing, DefinitionSchema::of($before), DefinitionSchema::of($deciding));
     return $ids;
   }
 

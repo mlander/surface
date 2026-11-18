@@ -320,6 +320,30 @@ final class Answer {
   }
 
   /**
+   * Refuses a refinement that accepts more than what it was handed.
+   *
+   * @param string $key
+   *   The key being refined, named in the message because a refiner that
+   *   breaks the contract has to be findable.
+   * @param string $who
+   *   Who did it, in words: the declaring class, a named contribution, an
+   *   operation, a key's variants, or what refined a key holding a child.
+   * @param \PortableSchema\Builder\Schema $before
+   *   The schema handed over.
+   * @param \PortableSchema\Builder\Schema $after
+   *   What came back.
+   *
+   * @throws \LogicException
+   *   When the result accepts anything the input did not.
+   */
+  public static function assertNarrows(string $key, string $who, Schema $before, Schema $after): void {
+    $widening = static::widening($before, $after);
+    if ($widening !== NULL) {
+      throw new \LogicException(sprintf('Refining "%s" for %s widened what it was given: %s. Refinement may only narrow; widening is a build-time act, and the build is over.', $key, $who, $widening));
+    }
+  }
+
+  /**
    * Says how a refined schema narrowed its key, or NULL when it did not.
    *
    * Narrowing::narrowed(), read from the two schemas: the first thing the
@@ -471,7 +495,7 @@ final class Answer {
       if (array_key_exists($constraint, $merged)) {
         // A check's options are its own to read: there is no stricter.
         if ((array) $merged[$constraint] != (array) $options) {
-          throw new \DomainException(sprintf('the options of the %s constraint were replaced', $constraint));
+          throw new \DomainException(sprintf('the options of the %s check were replaced', $constraint));
         }
         if (array_key_exists($constraint, $declared)) {
           $declared[$constraint] = $options;

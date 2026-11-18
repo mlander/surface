@@ -10,8 +10,9 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Refinement\Narrowing;
+use Drupal\surface\Refinement\Answer;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -55,7 +56,7 @@ class NarrowingTypesTest extends UnitTestCase {
    */
   #[DataProvider('accepted')]
   public function testAccepted(DataDefinitionInterface $before, DataDefinitionInterface $after): void {
-    Narrowing::assertNarrows('key', 'the test', $before, $after);
+    Answer::assertNarrows('key', 'the test', DefinitionSchema::of($before), DefinitionSchema::of($after));
     $this->addToAssertionCount(1);
   }
 
@@ -109,7 +110,7 @@ class NarrowingTypesTest extends UnitTestCase {
   public function testRefused(DataDefinitionInterface $before, DataDefinitionInterface $after, string $message): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage($message);
-    Narrowing::assertNarrows('key', 'the test', $before, $after);
+    Answer::assertNarrows('key', 'the test', DefinitionSchema::of($before), DefinitionSchema::of($after));
   }
 
   /**
@@ -163,12 +164,12 @@ class NarrowingTypesTest extends UnitTestCase {
       'a Count raising its maximum' => [
         (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 1, 'max' => 4]),
         (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 1, 'max' => 5]),
-        'the max of the Count constraint moved from 4 to 5',
+        'the maxItems moved from 4 to 5',
       ],
       'a Count losing its exactly' => [
         (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['exactly' => 2]),
         (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 1]),
-        'the exactly of the Count constraint changed from 2',
+        'the minItems and maxItems changed from 2',
       ],
       'a derivative that drops a constraint' => [
         DataDefinition::create('entity')->addConstraint('NotNull', []),

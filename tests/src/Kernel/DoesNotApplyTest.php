@@ -7,11 +7,12 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Entries;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\DoesNotApply;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
@@ -119,10 +120,10 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
    */
   public function testNothingIsNarrowerAndNothingComesBack(): void {
     $day = DataDefinition::create('string')->setRequired(TRUE);
-    Narrowing::assertNarrows('send_day', 'a test', $day, DoesNotApply::marked($day));
+    Answer::assertNarrows('send_day', 'a test', DefinitionSchema::of($day), DefinitionSchema::of(DoesNotApply::marked($day)));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('a key that did not apply was made to apply');
-    Narrowing::assertNarrows('send_day', 'a test', DoesNotApply::marked($day), $day);
+    Answer::assertNarrows('send_day', 'a test', DefinitionSchema::of(DoesNotApply::marked($day)), DefinitionSchema::of($day));
   }
 
   /**

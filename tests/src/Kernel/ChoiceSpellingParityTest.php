@@ -6,9 +6,10 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Entries;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
@@ -171,23 +172,13 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
     foreach ($before as $before_spelling => $declared) {
       foreach ($narrower as $after_spelling => $after) {
         $pairing = $before_spelling . ' to ' . $after_spelling;
-        Narrowing::assertNarrows(
-          'badge',
-          'the test',
-          $this->definition($declared),
-          $this->definition($after),
-        );
+        Answer::assertNarrows('badge', 'the test', DefinitionSchema::of($this->definition($declared)), DefinitionSchema::of($this->definition($after)));
         $accepted[] = $pairing;
       }
       foreach ($wider as $after_spelling => $after) {
         $pairing = $before_spelling . ' to ' . $after_spelling;
         try {
-          Narrowing::assertNarrows(
-            'badge',
-            'the test',
-            $this->definition($declared),
-            $this->definition($after),
-          );
+          Answer::assertNarrows('badge', 'the test', DefinitionSchema::of($this->definition($declared)), DefinitionSchema::of($this->definition($after)));
           $this->fail(sprintf('Widening %s was accepted.', $pairing));
         }
         catch (\LogicException $e) {

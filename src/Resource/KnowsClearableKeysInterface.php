@@ -13,7 +13,7 @@ namespace Drupal\surface\Resource;
  * nullable, and would refuse null there. A storage implementing this is
  * asked once per key when a resource is built, and a key it answers FALSE
  * for is marked as always held
- * (\Drupal\surface\DefinitionMetadata::setAlwaysHeld()), which the
+ * (\Drupal\surface\Contract\SchemaFacts::isAlwaysHeld()), which the
  * pipeline, both schemas and the widgets read. A storage that does not
  * implement it, or answers NULL, says nothing, and the key may be
  * cleared as before.

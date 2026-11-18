@@ -196,7 +196,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     $this->assertContains('servings', $this->pipeline()->validate($surface, ['servings' => 1] + $surface->getDefaultValues() + ['name' => 'x'])->keys());
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('Refining "servings" for the "create" operation widened what it was given: the max of the Range constraint moved from 12 to 99.');
+    $this->expectExceptionMessage('Refining "servings" for the "create" operation widened what it was given: the maximum moved from 12 to 99.');
     $widening = RecipeResource::create('main')->withConstraint('servings', Schema::any()->minimum(1)->maximum(99));
     $this->resources()->build(RecipeResource::class, $widening);
   }
@@ -288,7 +288,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
       ],
       'a refiner that watches nothing widens' => [
         WideningRefinerStructure::class,
-        'Refining "name" for ' . WideningRefinerStructure::class . '::nameMayBeLonger() widened what it was given: the max of the Length constraint moved from 10 to 40.',
+        'Refining "name" for ' . WideningRefinerStructure::class . '::nameMayBeLonger() widened what it was given: the maxLength moved from 10 to 40.',
       ],
       'a parent refines its attached structure' => [
         RefinesAttachedStructure::class,

@@ -277,7 +277,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
       'dropping the list of allowed values' => [
         $choices, FALSE,
         new ConstraintRewritingRefiner(['Choice' => ['multiple' => TRUE]]),
-        'the options of the Choice constraint were replaced',
+        'the options of the Choice check were replaced',
       ],
       'lowering a minimum: the key\'s stands' => [
         $length, FALSE,

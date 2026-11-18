@@ -233,7 +233,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    */
   public function testWideningIsRefusedByTheChild(): void {
     $surface = static::shells(static::child());
-    $message = 'Refining "code" for the declaring class widened what it was given: the max of the Length constraint moved from 8 to 20. Refinement may only narrow; widening is a build-time act, and the build is over.';
+    $message = 'Refining "code" for the declaring class widened what it was given: the maxLength moved from 8 to 20. Refinement may only narrow; widening is a build-time act, and the build is over.';
     $cases = [
       'attachment' => ['att' => ['mode' => 'widen']],
       'chosen variants' => ['kind' => 'x', 'pick' => ['mode' => 'widen']],
@@ -259,13 +259,13 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    * with values that give the advertised 8 back: each shell refuses, as
    * the code before refused, fresh and woken from serialize(). Its child
    * is the sealed one, so only the check of the whole shell, on its
-   * schemas (Surface::assertShellNarrows()), sees the widening. Refined
+   * schemas (Answer::assertNarrows()), sees the widening. Refined
    * again with the same narrowing or a narrower one, it answers.
    */
   public function testRefinedAgainKeepsTheNarrowingCheck(): void {
     $surface = static::shells(static::child());
     $first = static::at('narrow');
-    $moved = 'the max of the Length constraint moved from 4 to 8.';
+    $moved = 'the maxLength moved from 4 to 8.';
     $child = 'for the child attached there widened what it was given:';
     $cases = [
       'att' => [
@@ -454,7 +454,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $entry = $bound->entries()->entry('e');
     $this->assertNotSame($refined->entries()->entry('e'), $entry, 'The through port copies the refined shell.');
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('Refining "e" for the child attached there widened what it was given: inside the code property, the max of the Length constraint moved from 4 to 8.');
+    $this->expectExceptionMessage('Refining "e" for the child attached there widened what it was given: inside the code property, the maxLength moved from 4 to 8.');
     $bound->refine(['e' => ['mode' => 'none']]);
   }
 

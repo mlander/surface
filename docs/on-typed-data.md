@@ -184,7 +184,7 @@ schema, never the sealed one. The form, the pipeline and the contract emitter
   It hands core a copy of the definition carrying a digest among its
   settings, so that core's
   prototype cache tells two definitions apart
-  (`src/DefinitionTypedData.php`,
+  (`ConstraintRunner::typedValue()`,
   [1.1](core-gaps.md#11-a-typed-data-prototype-keyed-by-its-definition)).
 - **Storage.** A config object is validated whole against its config
   schema through typed config before it is saved

@@ -6,9 +6,10 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Surface;
 use Drupal\surface\Refinement\ChoiceSet;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
@@ -178,7 +179,7 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
         }
       }
       $written = $rule->applyAsWritten(Surface::deepClone($definition));
-      $widened = Narrowing::narrowed($written, $definition);
+      $widened = Answer::narrowed(DefinitionSchema::of($written), DefinitionSchema::of($definition));
       if ($widened !== NULL) {
         throw new \LogicException(sprintf('%s widens the shape %s: %s. An alter of a shape narrows it at every key that uses it, so it may only tighten.', $this->alter, $this->shape, $widened));
       }

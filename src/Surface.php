@@ -793,7 +793,7 @@ final class Surface implements SurfaceInterface {
    * the schema at each refined structure's mount replaced by the
    * structure's own schema around the refined structure's entries' schemas
    * (DefinitionSchema::withProperties(), withPropertyAt()). The whole map
-   * is held to the narrowing check (assertShellNarrows()): a key refined
+   * is held to the narrowing check (Answer::assertNarrows()): a key refined
    * already and refined again holds the sealed structures, whose keys were
    * checked against the sealed ones, not against what that refinement made
    * of them.
@@ -840,7 +840,7 @@ final class Surface implements SurfaceInterface {
     // refined structure's schema in place at its mount.
     $before = $refined ?? $base->schema();
     $schema = static::composedMount($entry, $before, $answers);
-    static::assertShellNarrows($entry->name, 'the structures attached at its mounts', $refined ?? $entry->schema(), $schema);
+    Answer::assertNarrows($entry->name, 'the structures attached at its mounts', $refined ?? $entry->schema(), $schema);
     return $base->withSchema($schema);
   }
 
@@ -1121,7 +1121,7 @@ final class Surface implements SurfaceInterface {
    * as it was. The entry is a new one even where the child changed
    * nothing. A child with no keys, whose map is read as a value, gives the
    * shell alone. The whole key is held to the narrowing check
-   * (assertShellNarrows()).
+   * (Answer::assertNarrows()).
    *
    * @param \Drupal\surface\Entry $entry
    *   The key, as advertised.
@@ -1168,38 +1168,8 @@ final class Surface implements SurfaceInterface {
     $schema = $schemas === [] || !DefinitionSchema::holdsProperties($shell)
       ? ($chosen === NULL ? $shell : $entry->variants->valueSchema())
       : DefinitionSchema::withProperties($shell, $schemas);
-    static::assertShellNarrows($entry->name, 'the child attached there', $entry->schema(), $schema);
+    Answer::assertNarrows($entry->name, 'the child attached there', $entry->schema(), $schema);
     return $base->withSchema($schema);
-  }
-
-  /**
-   * Refuses a refined shell that accepts more than its key did.
-   *
-   * The narrowing check of a key that holds a child frame, on its schemas
-   * (Answer::narrowed()). Each of the child's keys was held to the check
-   * when the child refined it, against the sealed child's; the whole key is
-   * held to it here, against the key as this data surface holds it: a
-   * variant chosen where the deciding key is locked, which the key already
-   * holds the map of (another variant gains and loses keys), and a key a
-   * refinement made, refined again, whose child is the sealed one.
-   *
-   * @param string $name
-   *   The key.
-   * @param string $who
-   *   What refined it, in words.
-   * @param \PortableSchema\Builder\Schema $before
-   *   The key's schema as this data surface holds it.
-   * @param \PortableSchema\Builder\Schema $after
-   *   The refined key's schema.
-   *
-   * @throws \LogicException
-   *   When the refined key accepts anything the key did not.
-   */
-  protected static function assertShellNarrows(string $name, string $who, Schema $before, Schema $after): void {
-    $widening = Answer::narrowed($after, $before);
-    if ($widening !== NULL) {
-      throw new \LogicException(sprintf('Refining "%s" for %s widened what it was given: %s. Refinement may only narrow; widening is a build-time act, and the build is over.', $name, $who, $widening));
-    }
   }
 
   /**

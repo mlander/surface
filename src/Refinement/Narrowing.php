@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Refinement;
 
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Contract\ConstraintKeywords;
 
 /**
  * The check that refinement only ever narrows.
@@ -50,7 +47,7 @@ use Drupal\surface\DefinitionMetadata;
  * advertising the narrower one in the first place.
  *
  * The variants' placeholder, an `any` marked with its deciding key
- * (DefinitionMetadata::variantsBy()), advertises nothing of its own, so
+ * (SchemaFacts::variantsBy()), advertises nothing of its own, so
  * every type is narrower than it: it resolves to the map of the variant
  * its deciding key chose, the one way a shape may appear during
  * refinement. An open value, `any` held whole (LeafRules::open()), accepts
@@ -72,9 +69,12 @@ use Drupal\surface\DefinitionMetadata;
  * accepts every value the item refused.
  *
  * Inside a map the rules recurse. A refined map holds exactly the
- * properties it was handed — gaining one would accept a key nobody was
- * told about, losing one would refuse a key everybody was — and every
+ * properties it was handed (gaining one would accept a key nobody was
+ * told about, losing one would refuse a key everybody was), and every
  * property is held to this same table, as is a list's item definition.
+ *
+ * The table is applied to schemas (Answer::assertNarrows(),
+ * Answer::narrowed()); this class holds its words for one constraint.
  *
  * @see \Drupal\surface\SurfaceInterface::refine()
  */
@@ -89,190 +89,6 @@ final class Narrowing {
    * options are messages.
    */
   public const COMPARATORS = ['Length', 'Range', 'Count'];
-
-  /**
-   * Refuses a refinement that accepts more than what it was handed.
-   *
-   * @param string $key
-   *   The definition key being refined, named in the message because a
-   *   refiner that breaks the contract has to be findable.
-   * @param string $contributor
-   *   Who did it, in words: the declaring class, a named contribution, an
-   *   operation or a key's variants.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
-   *   The definition handed to the refiner.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
-   *   What it gave back.
-   *
-   * @throws \LogicException
-   *   When the result accepts anything the input did not.
-   */
-  public static function assertNarrows(string $key, string $contributor, DataDefinitionInterface $before, DataDefinitionInterface $after): void {
-    $widening = self::widening($before, $after);
-    if ($widening !== NULL) {
-      throw new \LogicException(sprintf(
-        'Refining "%s" for %s widened what it was given: %s. Refinement may only narrow; widening is a build-time act, and the build is over.',
-        $key,
-        $contributor,
-        $widening,
-      ));
-    }
-  }
-
-  /**
-   * Says how a refined definition narrowed, or NULL when it did not.
-   *
-   * The same table read the other way: whatever the refined definition
-   * would widen, going back to what it was handed, is what it narrowed.
-   * For a check that a refinement left something alone, a collection's
-   * items under its parent's refiners.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
-   *   The definition handed over.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
-   *   What came back.
-   *
-   * @return string|null
-   *   What narrowed, in words, or NULL.
-   */
-  public static function narrowed(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
-    return self::widening($after, $before);
-  }
-
-  /**
-   * Says how a refined definition widened, or NULL when it did not.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
-   *   The definition handed over.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
-   *   What came back.
-   *
-   * @return string|null
-   *   What widened, in words, or NULL.
-   */
-  protected static function widening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
-    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-    if (DoesNotApply::marks($after)) {
-      return NULL;
-    }
-    if (DoesNotApply::marks($before)) {
-      return 'a key that did not apply was made to apply';
-    }
-    if (($before->getDataType() === 'any' && (DefinitionMetadata::variantsBy($before) !== NULL || DefinitionMetadata::isHeldWhole($before))) || self::isDerivative($before->getDataType(), $after->getDataType())) {
-      // The variants' placeholder, which stands for what its deciding key
-      // chooses, an open value, which accepts every value, or the base of
-      // what it became, so the shape it becomes is no wider; only its own
-      // flag and constraints are left to compare.
-      return self::ownWidening($before, $after);
-    }
-    if ($before->getDataType() !== $after->getDataType()) {
-      return sprintf('the data type changed from %s to %s', $before->getDataType(), $after->getDataType());
-    }
-    return self::ownWidening($before, $after)
-      ?? self::propertyWidening($before, $after)
-      ?? self::itemWidening($before, $after);
-  }
-
-  /**
-   * Answers whether a data type is a derivative of another.
-   *
-   * Typed data names a derivative `<base>:<derivative>`, and a
-   * derivative of a derivative appends again, so the test is the base
-   * followed by a colon: `string_long` is not a derivative of `string`.
-   *
-   * @param string $base
-   *   The data type handed over.
-   * @param string $type
-   *   The data type that came back.
-   *
-   * @return bool
-   *   TRUE when the second is a derivative of the first.
-   */
-  protected static function isDerivative(string $base, string $type): bool {
-    return str_starts_with($type, $base . ':');
-  }
-
-  /**
-   * Says how a map's properties widened, or NULL when they did not.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
-   *   The definition handed over.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
-   *   What came back, of the same data type.
-   *
-   * @return string|null
-   *   What widened, in words, or NULL.
-   */
-  protected static function propertyWidening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
-    $declared = $before instanceof ComplexDataDefinitionInterface ? $before->getPropertyDefinitions() : [];
-    $refined = $after instanceof ComplexDataDefinitionInterface ? $after->getPropertyDefinitions() : [];
-    if ($declared === [] && $refined === []) {
-      return NULL;
-    }
-    $added = array_keys(array_diff_key($refined, $declared));
-    if ($added !== []) {
-      return sprintf('the map gained the %s %s', count($added) === 1 ? 'property' : 'properties', implode(', ', array_map('strval', $added)));
-    }
-    $removed = array_keys(array_diff_key($declared, $refined));
-    if ($removed !== []) {
-      return sprintf('the map lost the %s %s', count($removed) === 1 ? 'property' : 'properties', implode(', ', array_map('strval', $removed)));
-    }
-    foreach ($declared as $name => $property) {
-      $widening = self::widening($property, $refined[$name]);
-      if ($widening !== NULL) {
-        return sprintf('inside the %s property, %s', $name, $widening);
-      }
-    }
-    return NULL;
-  }
-
-  /**
-   * Says how a list's item definition widened, or NULL when it did not.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
-   *   The definition handed over.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
-   *   What came back, of the same data type.
-   *
-   * @return string|null
-   *   What widened, in words, or NULL.
-   */
-  protected static function itemWidening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
-    if (!$before instanceof ListDataDefinitionInterface || !$after instanceof ListDataDefinitionInterface) {
-      return NULL;
-    }
-    $widening = self::widening($before->getItemDefinition(), $after->getItemDefinition());
-    return $widening === NULL ? NULL : sprintf('inside the list items, %s', $widening);
-  }
-
-  /**
-   * Says how a definition's own flag and constraints widened.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
-   *   The definition handed over.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
-   *   What came back.
-   *
-   * @return string|null
-   *   What widened, in words, or NULL.
-   */
-  protected static function ownWidening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
-    if ($before->isRequired() && !$after->isRequired()) {
-      return 'the required flag was turned off';
-    }
-    $refined = $after->getConstraints();
-    foreach ($before->getConstraints() as $name => $options) {
-      $name = (string) $name;
-      if (!array_key_exists($name, $refined)) {
-        return sprintf('the %s constraint was removed', $name);
-      }
-      $widening = self::constraintWidening($name, (array) $options, (array) $refined[$name]);
-      if ($widening !== NULL) {
-        return $widening;
-      }
-    }
-    return NULL;
-  }
 
   /**
    * Says how one constraint widened, in this table's words.
@@ -335,7 +151,7 @@ final class Narrowing {
     // this check cannot read, so only leaving them alone is provably
     // narrower. Loose comparison, because a translated message is a
     // different object each time it is built and the same message.
-    return $before == $after ? NULL : sprintf('the options of the %s constraint were replaced', $name);
+    return $before == $after ? NULL : sprintf('the options of the %s check were replaced', $name);
   }
 
   /**
@@ -355,7 +171,10 @@ final class Narrowing {
     // Symfony spells min equal to max as `exactly` too: a bound like the
     // other two, which only narrows by staying what it was.
     if (isset($before['exactly']) && is_numeric($before['exactly']) && ($after['exactly'] ?? NULL) != $before['exactly']) {
-      return sprintf('the exactly of the %s constraint changed from %s', $name, self::describe($before['exactly']));
+      $keyword = self::keywordOf($name, 'exactly');
+      return $keyword === NULL
+        ? sprintf('the exactly of the %s check changed from %s', $name, self::describe($before['exactly']))
+        : sprintf('the %s changed from %s', $keyword, self::describe($before['exactly']));
     }
     foreach (['min' => 1, 'max' => -1] as $bound => $direction) {
       if (!isset($before[$bound]) || !is_numeric($before[$bound])) {
@@ -363,21 +182,44 @@ final class Narrowing {
         // sharpening it is the refiner's business.
         continue;
       }
+      $keyword = self::keywordOf($name, $bound);
       if (!isset($after[$bound]) || !is_numeric($after[$bound])) {
-        return sprintf('the %s constraint lost its %s', $name, $bound);
+        return $keyword === NULL ? sprintf('the %s check lost its %s', $name, $bound) : sprintf('the %s was removed', $keyword);
       }
       $moved = ($after[$bound] - $before[$bound]) * $direction;
       if ($moved < 0) {
         return sprintf(
-          'the %s of the %s constraint moved from %s to %s',
-          $bound,
-          $name,
+          'the %s moved from %s to %s',
+          $keyword ?? sprintf('%s of the %s check', $bound, $name),
           self::describe($before[$bound]),
           self::describe($after[$bound]),
         );
       }
     }
     return NULL;
+  }
+
+  /**
+   * Names the keyword an author writes for one bound of a comparator.
+   *
+   * Read from the constraint's row in ConstraintKeywords, for the type the
+   * comparator bounds: Range's max is `maximum`, Length's `maxLength`,
+   * Count's `maxItems`, and the min side the same; an exact bound names
+   * both.
+   *
+   * @param string $name
+   *   The comparator's plugin ID.
+   * @param string $bound
+   *   The bound: min, max or exactly.
+   *
+   * @return string|null
+   *   The keyword, or both joined by "and"; NULL where no row writes it.
+   */
+  protected static function keywordOf(string $name, string $bound): ?string {
+    $types = ['Length' => ['string'], 'Range' => ['number'], 'Count' => ['array']][$name] ?? NULL;
+    $written = $types === NULL ? NULL : ConstraintKeywords::write($name, [$bound => 1], $types);
+    $keywords = $written === NULL ? [] : array_map('strval', array_keys($written->keywords));
+    return $keywords === [] ? NULL : implode(' and ', $keywords);
   }
 
   /**

@@ -18,7 +18,6 @@ use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\DoesNotApply;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Refinement\RuntimeRefiner;
 use Drupal\surface\Resource\KnowsClearableKeysInterface;
@@ -578,7 +577,7 @@ final class Binding {
     if (DoesNotApply::marks($written)) {
       return;
     }
-    $widened = Narrowing::narrowed($written, $advertised);
+    $widened = Answer::narrowed(DefinitionSchema::of($written), DefinitionSchema::of($advertised));
     if ($widened !== NULL) {
       throw new \LogicException(sprintf('%s widens what the key declares: %s. A declared rule may only narrow; declare the key wider, or the rule narrower.', $name, $widened));
     }

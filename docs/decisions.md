@@ -16813,7 +16813,7 @@ once per schema object.
   naming the key: no example or test module builds such a shell.
 - **The narrowing check of a shell runs on schemas.** A refined shell
   is held to `Answer::narrowed()` against the key as the data surface
-  holds it (`Surface::assertShellNarrows()`), every time, with the words
+  holds it (`Answer::assertNarrows()`), every time, with the words
   the definition check used. It still refuses a refined surface refined
   again into what the first refinement narrowed, which a child's own
   checks cannot see. `Attachment::mapOf()`, `Collection::listOf()` and
@@ -16821,3 +16821,24 @@ once per schema object.
 - **The watched values are walked by schema.** `Surface::watchedPlaces()`
   walks every key by its schema, a host key's too: a property a host
   definition answers for and its schema does not list is not checked.
+
+### The narrowing check reads schemas and names the keyword
+
+`Narrowing` keeps the words for one constraint and nothing else: its
+definition half (`assertNarrows()`, `narrowed()` and the walk below
+them) is gone. Every narrowing check compares schemas:
+`Answer::assertNarrows()` and `Answer::narrowed()`, at a refiner's
+answer, a refined shell, an operation's narrowing, a variants' deciding
+key, a declared rule and a shape.
+
+- **A bound is named by the keyword the author writes.** A comparator's
+  bound is said through its row in `ConstraintKeywords`: "the maximum
+  moved from 50 to 100", "the maxLength moved from 10 to 40", "the
+  maxItems moved from 4 to 5", the min side the same, an exact bound as
+  "the minItems and maxItems changed from 2", a removed bound as "the
+  maxLength was removed". A check with no keyword says "the options of
+  the Uuid check were replaced".
+- **`DefinitionTypedData` is part of `ConstraintRunner`.** The runner is
+  the one place a typed value is made, so the digest copy that keeps
+  core's prototypes apart is a private step of it
+  (`ConstraintRunner::typedValue()`, `ConstraintRunner::DIGEST_SETTING`).

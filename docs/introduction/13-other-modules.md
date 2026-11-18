@@ -57,7 +57,7 @@ which the owner caps at 50, is refused so:
 
 ```
 narrow("limit") in the my_badges alter of block.my_teaser widens what
-the key declares: the max of the Range constraint moved from 50 to 100.
+the key declares: the maximum moved from 50 to 100.
 A declared rule may only narrow; declare the key wider, or the rule
 narrower.
 ```

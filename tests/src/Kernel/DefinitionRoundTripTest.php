@@ -22,7 +22,7 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\DefinitionTypedData;
+use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Plugin\SurfaceWidget\StringWidget;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -780,7 +780,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
       References::CONTENT => ['node'],
       References::TARGETS => ['article'],
       References::STORED_AS => 'uuid',
-      DefinitionTypedData::DIGEST_SETTING => 'abc',
+      ConstraintRunner::DIGEST_SETTING => 'abc',
       'own_setting' => ['nested' => [1, 2]],
     ]);
     $cases['settings with every key the module writes'] = [$settings, ['settings']];

@@ -9,9 +9,10 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -75,13 +76,13 @@ class NarrowingInsideMapsTest extends UnitTestCase {
     $before = static::map();
     $after = static::{$change}(Surface::deepClone($before));
     if ($widening === NULL) {
-      Narrowing::assertNarrows('settings', 'the test', $before, $after);
+      Answer::assertNarrows('settings', 'the test', DefinitionSchema::of($before), DefinitionSchema::of($after));
       $this->addToAssertionCount(1);
       return;
     }
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage($widening);
-    Narrowing::assertNarrows('settings', 'the test', $before, $after);
+    Answer::assertNarrows('settings', 'the test', DefinitionSchema::of($before), DefinitionSchema::of($after));
   }
 
   /**
@@ -98,7 +99,7 @@ class NarrowingInsideMapsTest extends UnitTestCase {
       'a list item offering fewer values' => ['fewerTags', NULL],
       'a property bounded looser' => [
         'moreColumns',
-        'inside the columns property, the max of the Range constraint moved from 6 to 9',
+        'inside the columns property, the maximum moved from 6 to 9',
       ],
       'a property no longer required' => [
         'optionalColumns',
@@ -127,7 +128,7 @@ class NarrowingInsideMapsTest extends UnitTestCase {
   public function testPlaceholderResolvesToAnyMap(): void {
     $placeholder = DataDefinition::create('any');
     DefinitionMetadata::setVariantsBy($placeholder, 'kind');
-    Narrowing::assertNarrows('settings', 'the variants', $placeholder, static::map());
+    Answer::assertNarrows('settings', 'the variants', DefinitionSchema::of($placeholder), DefinitionSchema::of(static::map()));
     $this->addToAssertionCount(1);
 
     // But a required placeholder stays required in what it resolves to.
@@ -135,7 +136,7 @@ class NarrowingInsideMapsTest extends UnitTestCase {
     DefinitionMetadata::setVariantsBy($required, 'kind');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('the required flag was turned off');
-    Narrowing::assertNarrows('settings', 'the variants', $required, static::map());
+    Answer::assertNarrows('settings', 'the variants', DefinitionSchema::of($required), DefinitionSchema::of(static::map()));
   }
 
   /**

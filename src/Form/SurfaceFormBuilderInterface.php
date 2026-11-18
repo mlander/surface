@@ -174,7 +174,7 @@ interface SurfaceFormBuilderInterface {
    * Render key on a module's fieldset its alter placed: the key it follows.
    *
    * Set by the map widget on the details a placed mount renders as
-   * (DefinitionMetadata::getPlacedAfter()). The element stays where its
+   * (SchemaFacts::placedAfter()). The element stays where its
    * values are posted, inside the grouping container, for everything
    * Form API and this builder do with it; preRenderSurfaceContainer()
    * draws it after that key when the container is rendered.

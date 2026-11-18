@@ -372,7 +372,7 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
    */
   public function testWhatRulesMayNotSayIsRefusedAtBuild(): void {
     $refusals = [
-      WideningRuleStructure::class => 'narrow("count") in resource_test.broken.widening_rule widens what the key declares: the max of the Range constraint moved from 10 to 20.',
+      WideningRuleStructure::class => 'narrow("count") in resource_test.broken.widening_rule widens what the key declares: the maximum moved from 10 to 20.',
       UnofferedRuleValueStructure::class => 'narrow("kind") in resource_test.broken.unoffered_rule_value widens what the key declares: the LabeledChoice constraint gained the values z',
       MistypedConditionStructure::class => 'narrow("name") in resource_test.broken.mistyped_condition compares "count", whose type is integer, with \'5\', which it never holds.',
       UnconditionalRuleStructure::class => 'narrow("name") in resource_test.broken.unconditional_rule says no ->when().',
