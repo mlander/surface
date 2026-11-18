@@ -19,7 +19,7 @@ use PortableSchema\Builder\Schema;
 /**
  * What addMap() hands its callable first: keys that land in a plain map.
  *
- * A map whose keys are plain values (add(), addList(), addDefinition(), a
+ * A map whose keys are plain values (add(), addDefinition(), a
  * map inside, describe()) is a map definition at its owner's key. One
  * whose callable asks for a frame of its own (a child, a rule, a resolve,
  * a port) is a structure with no id of its own instead: the first such

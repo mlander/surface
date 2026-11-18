@@ -128,7 +128,7 @@ class TypedDataReaderTest extends SurfaceKernelTestBase {
     $reading = $this->container->get(TypedDataReader::class)->read($map, $inputs);
 
     $this->assertSame(['name', 'address', 'tags', 'owner', 'code'], array_keys($inputs->recorded));
-    $this->assertSame(['addDefinition', 'addMap', 'addList', 'addDefinition', 'addDefinition'], array_column($inputs->recorded, 'verb'));
+    $this->assertSame(['addDefinition', 'addMap', 'addDefinition', 'addDefinition', 'addDefinition'], array_column($inputs->recorded, 'verb'));
     $this->assertTrue($inputs->recorded['name']['definition']->isRequired());
     $this->assertSame(['max' => 20], $inputs->recorded['name']['definition']->getConstraints()['Length']);
     $this->assertSame(['city', 'zip'], array_keys($inputs->recorded['address']['map']->recorded));

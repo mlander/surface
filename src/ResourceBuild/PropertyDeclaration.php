@@ -687,10 +687,8 @@ final class PropertyDeclaration {
     $attribute = self::attribute($property, $outputs ? Output::class : Input::class)
       ?? throw new \LogicException(sprintf('%s::$%s carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[AttachVariants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.', $property->getDeclaringClass()->getName(), $key));
     if ($attribute->list !== NULL) {
-      $item = class_exists($attribute->list) && !is_subclass_of($attribute->list, ShapeInterface::class)
-        ? self::itemMap($attribute->list)
-        : $attribute->list;
-      $definition = $adapter->addList($key, $item, self::label($attribute->label), $default)->shellAt($key);
+      $list = (new ListDataDefinition(['type' => 'list'], self::listItem($adapter, $key, $attribute->list)))->setLabel(self::label($attribute->label));
+      $definition = $adapter->addDefinition($key, $list, $default)->shellAt($key);
     }
     else {
       $definition = $adapter->addTyped($key, $attribute->type ?? self::type($property), self::label($attribute->label), $default);
@@ -1003,6 +1001,40 @@ final class PropertyDeclaration {
     return ($group['widget'] ?? NULL) === ArrangementGroup::DETAILS
       ? ArrangementGroup::details($id, self::label($label), ($options['open'] ?? TRUE) === FALSE, $weight, $description)
       : ArrangementGroup::fieldset($id, self::label($label), $weight, $description);
+  }
+
+  /**
+   * Builds the item of a list declared with `list:`.
+   *
+   * @param \Drupal\surface\ResourceBuild\BlueprintAdapterBase $adapter
+   *   The blueprint, which knows the site's shapes.
+   * @param string $key
+   *   The key, for the messages.
+   * @param string $item
+   *   What `list:` names: a type add() takes, a shape's class, or a plain
+   *   class of #[Input] properties.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The item's definition; a shape's as the site's alters left it.
+   *
+   * @throws \LogicException
+   *   When a class with a backslash is no shape, or the type is no row of
+   *   the type table.
+   */
+  private static function listItem(BlueprintAdapterBase $adapter, string $key, string $item): DataDefinitionInterface {
+    if (class_exists($item) && !is_subclass_of($item, ShapeInterface::class)) {
+      return self::itemMap($item);
+    }
+    if (str_contains($item, '\\')) {
+      if (!Shapes::isShape($item)) {
+        throw new \LogicException(sprintf('The list "%s" was handed %s, which is no type and no shape: a shape implements %s and carries #[Document].', $key, $item, ShapeInterface::class));
+      }
+      return $adapter->shapesInUse()?->forKey($item) ?? Shapes::unaltered($item);
+    }
+    if (!LeafTypes::has($item)) {
+      throw new \LogicException(sprintf('The list "%s" declares items of the %s type, which JSON Schema has no type for. Each item is one of %s, or a shape\'s class; %s', $key, $item, implode(', ', array_keys(LeafTypes::ROWS)), LeafTypes::meant($item)));
+    }
+    return DataDefinition::create($item);
   }
 
   /**

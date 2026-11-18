@@ -16673,8 +16673,8 @@ every check.
 ### Every verb returns the blueprint
 
 `addMap()`, `attach()`, `attachList()`, `attachVariants()`,
-`attachEach()`, `addEach()`, `addDefinition()`, `compute()` and
-`addList()` return the blueprint, as `add()` does (decision 1 of
+`attachEach()`, `addEach()`, `addDefinition()` and `compute()` return
+the blueprint, as `add()` does (decision 1 of
 2026-11-14). A key is worded through its schema or the verb's named
 arguments (`description:`, `required:`, `storedAs:`), never through a
 definition a verb hands back. `add()` takes a `Schema` alone, `compute()`
@@ -16688,12 +16688,15 @@ alone.
   spelling through `addTyped()`, `addEachTyped()` and `computeTyped()`,
   all `@internal`. Slice 35's later parts remove them with the
   definitions.
-- **`addList()` stays, for a list of plain maps.** At an input a list of
-  objects is a collection of children (decided 2026-11-17), so a list
-  whose item is a plain map with no child has no schema spelling. The
-  value baseline pins one, `values_test.keys` `/slots`: written as a
-  schema it moved 17 cases. `addList()` now documents that one use; the
-  blueprint keeps 17 methods.
+- **`addList()` is gone; `addDefinition()` takes a list.** At an input
+  a list of objects is a collection of children (decided 2026-11-17), so
+  a list whose item is a plain map with no child has no schema spelling.
+  The value baseline pins one, `values_test.keys` `/slots`: written as a
+  schema it moved 17 cases. It is handed to `addDefinition()` as a
+  `ListDataDefinition`, the Typed Data door decision 6 keeps; a map is
+  still refused there. The readers that build a list definition declare
+  it the same way. The blueprint has 16 methods (decision 5 of
+  2026-11-14).
 - **An author's plain map may say its default.** `Schema::object([...])
   ->default([])` is read as a map that starts empty, as
   `AddressFieldSettingsResource`'s overrides do. Only an author's

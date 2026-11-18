@@ -259,36 +259,6 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    *
-   * The list is built here, so an author never reaches for core's
-   * constructor, whose create() asks the typed data manager for the item.
-   */
-  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): static {
-    $shaped = NULL;
-    if (is_string($item) && str_contains($item, '\\')) {
-      if (is_subclass_of($item, DefinesInputsInterface::class)) {
-        throw new \LogicException(sprintf('addList("%s") was handed %s, a resource or structure, as its item: a list of groups of keys is a collection, attachList(\'%s\', ...).', $key, $item, $key));
-      }
-      $item = $shaped = $this->fromShape($key, $item, 'addList');
-    }
-    elseif (is_string($item)) {
-      if (!LeafTypes::has($item)) {
-        throw new \LogicException(sprintf('addList("%s", "%s") declares items of the %s type, which JSON Schema has no type for. Each item is one of %s, or a shape\'s class; %s', $key, $item, $item, implode(', ', array_keys(LeafTypes::ROWS)), LeafTypes::meant($item)));
-      }
-      $item = $this->typedDataManager->createDataDefinition($item);
-    }
-    $list = (new ListDataDefinition(['type' => 'list'], $item))->setLabel($label);
-    $this->addKey($key, $list, $default, 'addList');
-    if ($shaped !== NULL) {
-      // Each item starts from the shape, held to it as a key declared with
-      // it is: by the name of the key's items.
-      $this->shaped[$key . '.*'] = $shaped;
-    }
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   *
    * The map is built whole before it is declared, so every key inside is
    * held to the type table with it; what its keys start from is its
    * default.
@@ -354,7 +324,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @param string $key
    *   The key, for the messages.
    * @param string $type
-   *   The class handed to add() or addList().
+   *   The class handed to add().
    * @param string $verb
    *   The method it was handed to, for the message.
    *
@@ -405,20 +375,19 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    *
-   * One value: a map or a list is refused, naming the method that declares
+   * One value or a list: a map is refused, naming the method that declares
    * it, so every object a blueprint holds is declared by a method that is
    * one JSON Schema construct.
    *
    * Decision: see docs/decisions.md#a-blueprint-takes-no-complex-data-types.
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
-    if (!LeafTypes::isLeaf($definition)) {
+    if (!$definition instanceof ListDataDefinitionInterface && !LeafTypes::isLeaf($definition)) {
       throw new \LogicException(sprintf(
-        'addDefinition("%s") was handed a %s: addDefinition() declares one value, of one of %s; %s',
+        'addDefinition("%s") was handed a map: addDefinition() declares one value, of one of %s, or a list; %s',
         $key,
-        $definition instanceof ListDataDefinitionInterface ? 'list' : 'map',
         implode(', ', array_keys(LeafTypes::ROWS)),
-        LeafTypes::meant($definition instanceof ListDataDefinitionInterface ? 'list' : 'map'),
+        LeafTypes::meant('map'),
       ));
     }
     $this->addKey($key, $definition, $default);
