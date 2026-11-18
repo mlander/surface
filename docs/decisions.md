@@ -16913,7 +16913,8 @@ from schemas; `DefinitionMetadata` is read there no more.
   (`DefinitionSchema::shell()`, `of()`). `shellSchema()` is gone. The
   placeholder a key advertises before a variant is chosen is a schema
   (`Variants::placeholder()`, written by `ValueSchema::value()`). The
-  build cache's format is `schema-shells`.
+  build cache's format is `schema-shells` (`schema-shells-terms` since
+  the term renames of the same day, which a serialized build names).
 - **The readers of a shell read its schema.** Where its variants come
   from (`SchemaFacts::variantsFrom()`), whether the site lists them
   (`readVariants()`), its constraints, title, description and type.

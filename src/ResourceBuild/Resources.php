@@ -150,10 +150,11 @@ final class Resources implements ResourcesInterface {
    * Changed whenever a serialized build changes shape, so a row written
    * by other code is not read: 'entries' since a data surface holds its
    * keys as Entries, 'schemas' since an entry holds its schema alone,
-   * 'schema-shells' since a Variants holds its shell as a schema (all
-   * 2026-11-18).
+   * 'schema-shells' since a Variants holds its shell as a schema,
+   * 'schema-shells-terms' since the storage layouts and the declaring
+   * class were renamed, which a serialized build names (all 2026-11-18).
    */
-  public const BUILD_FORMAT = 'schema-shells';
+  public const BUILD_FORMAT = 'schema-shells-terms';
 
   /**
    * What builds reference keys, where withRegistry() was handed one.
